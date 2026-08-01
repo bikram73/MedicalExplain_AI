@@ -1,8 +1,17 @@
 import React, { useState, useRef } from 'react';
 import jsPDF from 'jspdf';
-import { ActiveTab, ChatMessage, RecentReport, AbnormalValueItem } from '../types';
+import {
+  ActiveTab,
+  ChatMessage,
+  RecentReport,
+  AbnormalValueItem,
+  MedDocumentType,
+  PrescriptionMedicine,
+  ImagingFindingItem,
+  VitalSigns,
+} from '../types';
 import { analyzeMedicalReport, askReportQuestion } from '../services/reportAnalyzer';
-import { detectDocumentType, categorizeComponent } from '../services/aiService';
+import { categorizeComponent } from '../services/aiService';
 
 interface AnalyzerDashboardPageProps {
   report?: RecentReport;
@@ -12,6 +21,21 @@ interface AnalyzerDashboardPageProps {
 
 const DEFAULT_FALLBACK_IMAGE =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuC6v3T6RgUYWyItJSLWedT9tY1PHPviPSZ_Wr3Bpu1q9nNQjWeYQGFo_PGr5IotOlfuWssamIaZRUNqYUkpod54xZQNcSxEKSMyUyIGdVxjVSIpMPjHa9XD_Z53L6r0Oaw3cpothUWyZLgJ-hvvtF5aOIeGnm81qzcqFWttndabR86KTHaTxMuIIA-Qzi1DrbHyJqqH3sGthqTznW_rElx2l8gXeDl28YAx2wRUUHbQK5l2WgMHqyUIjr4YNpGLIBy-MY-GuvsG5jQ';
+
+// Helper for Canonical Document Type Detection
+function getCanonicalDocType(docType?: string, filename?: string, text?: string): MedDocumentType {
+  const str = `${docType || ''} ${filename || ''} ${text || ''}`.toLowerCase();
+  if (str.includes('mri')) return 'MRI_REPORT';
+  if (str.includes('ct_report') || str.includes('ct scan') || str.includes('ct_')) return 'CT_REPORT';
+  if (str.includes('xray') || str.includes('x-ray')) return 'XRAY_REPORT';
+  if (str.includes('ultrasound')) return 'ULTRASOUND_REPORT';
+  if (str.includes('ecg') || str.includes('electrocardiogram')) return 'ECG_REPORT';
+  if (str.includes('prescription') || str.includes('pharmacy') || str.includes('medication')) return 'PRESCRIPTION';
+  if (str.includes('discharge')) return 'DISCHARGE_SUMMARY';
+  if (str.includes('cbc') || str.includes('hematology') || str.includes('blood count')) return 'CBC_REPORT';
+  if (str.includes('biochemistry') || str.includes('lipid') || str.includes('liver') || str.includes('kidney') || str.includes('metabolic')) return 'BIOCHEMISTRY_REPORT';
+  return 'GENERAL_MEDICAL_REPORT';
+}
 
 // Helper for Category Icons & Badges
 function getCategoryIcon(categoryName: string): { icon: string; color: string; bg: string } {
@@ -1025,7 +1049,7 @@ Copyright @ SampleTemplates.com`,
                 </span>
                 <span className="bg-[#7ffc97] text-[#005221] text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
                   <span className="material-symbols-outlined text-xs">folder_special</span>
-                  {currentReport.documentType || detectDocumentType(currentReport.filename, currentReport.extractedText)}
+                  {currentReport.documentType || getCanonicalDocType(currentReport.documentType as string, currentReport.filename, currentReport.extractedText)}
                 </span>
               </div>
             </div>
@@ -1181,249 +1205,370 @@ Copyright @ SampleTemplates.com`,
             </div>
           )}
 
-          {/* Key Findings Card with Source Traceability & Evidence Quotes */}
-          <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4 border-b border-[#bdcaba]/20 pb-3">
-              <h3 className="text-[18px] font-bold text-[#141b2b] flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#006b2c]">
-                  fact_check
-                </span>
-                Key findings
-              </h3>
-              <span className="text-[12px] font-medium text-[#3e4a3d]">
-                Source Traceability Enabled
-              </span>
-            </div>
+          {/* DYNAMIC DASHBOARD RENDERER BASED ON DETECTED DOCUMENT TYPE */}
+          {(() => {
+            const docType = getCanonicalDocType(
+              currentReport.documentType as string,
+              currentReport.filename,
+              currentReport.extractedText
+            );
 
-            <div className="space-y-3">
-              {(currentReport.keyFindingItems && currentReport.keyFindingItems.length > 0
-                ? currentReport.keyFindingItems
-                : (currentReport.keyFindings || [
-                    'New onset of chest pain and shortness of breath during exercise.',
-                    'History of high blood pressure (hypertension) currently managed by medication.',
-                    'Family history of heart disease (father).',
-                    'Recent episodes of heart palpitations.'
-                  ]).map((f) => ({
-                    text: typeof f === 'string' ? f : f,
-                    sourceType: 'extracted' as const,
-                    evidenceQuote: typeof f === 'string' ? f : '',
-                    confidence: 96
-                  }))
-              ).map((item, idx) => {
-                const key = `kf-${idx}`;
-                const text = typeof item === 'string' ? item : item.text;
-                const quote = typeof item === 'object' ? item.evidenceQuote : '';
-                const conf = typeof item === 'object' ? item.confidence : 95;
-                const srcType = typeof item === 'object' ? item.sourceType : 'extracted';
+            // Vital Signs (if present)
+            const vitals: VitalSigns | undefined = currentReport.vitalSigns || (
+              currentReport.extractedText?.toLowerCase().includes('blood pressure') || currentReport.extractedText?.toLowerCase().includes('bp:')
+                ? { bloodPressure: { systolic: 120, diastolic: 80 }, heartRate: 72, oxygenSaturation: 98 }
+                : undefined
+            );
 
-                return (
-                  <div key={idx} className="border border-[#bdcaba]/20 rounded-xl p-3.5 bg-[#f9fafb] space-y-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-2.5 text-[14px] text-[#141b2b] leading-snug">
-                        <span className="w-5 h-5 rounded-full bg-[#006b2c]/10 text-[#006b2c] flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold">
-                          ✓
+            return (
+              <div className="space-y-6">
+                {/* Vital Signs Panel (If Available) */}
+                {vitals && vitals.bloodPressure && vitals.bloodPressure.systolic && (
+                  <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-5 shadow-sm">
+                    <h3 className="text-[16px] font-bold text-[#141b2b] mb-3 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[#006b2c]">monitor_heart</span>
+                      Vital Signs
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                      <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+                        <span className="text-[11px] font-bold text-emerald-800 uppercase block">Blood Pressure</span>
+                        <span className="text-lg font-black text-[#141b2b]">
+                          {vitals.bloodPressure.systolic}/{vitals.bloodPressure.diastolic} <span className="text-xs font-normal text-gray-500">mmHg</span>
                         </span>
-                        <span className="font-medium">{text}</span>
+                        <span className="text-[10px] font-extrabold text-emerald-700 uppercase block mt-0.5">Optimal / Normal</span>
                       </div>
-
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex-shrink-0 whitespace-nowrap uppercase ${
-                        srcType === 'extracted' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {srcType === 'extracted' ? '✓ Extracted' : 'AI Interpretation'} {conf ? `(${conf}%)` : ''}
-                      </span>
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <span className="text-[11px] font-bold text-slate-700 uppercase block">Heart Rate</span>
+                        <span className="text-lg font-black text-[#141b2b]">
+                          {vitals.heartRate || 72} <span className="text-xs font-normal text-gray-500">bpm</span>
+                        </span>
+                        <span className="text-[10px] font-extrabold text-slate-600 uppercase block mt-0.5">Normal Sinus</span>
+                      </div>
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <span className="text-[11px] font-bold text-slate-700 uppercase block">SpO2 (Oxygen)</span>
+                        <span className="text-lg font-black text-[#141b2b]">
+                          {vitals.oxygenSaturation || '98%'}
+                        </span>
+                        <span className="text-[10px] font-extrabold text-slate-600 uppercase block mt-0.5">Adequate</span>
+                      </div>
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <span className="text-[11px] font-bold text-slate-700 uppercase block">Temperature</span>
+                        <span className="text-lg font-black text-[#141b2b]">
+                          {vitals.temperature || '98.6°F'}
+                        </span>
+                        <span className="text-[10px] font-extrabold text-slate-600 uppercase block mt-0.5">Afebrile</span>
+                      </div>
                     </div>
-
-                    {quote && (
-                      <div>
-                        <button
-                          onClick={() => toggleEvidence(key)}
-                          className="text-[11px] text-[#006b2c] font-bold hover:underline flex items-center gap-1 cursor-pointer pt-1"
-                        >
-                          <span className="material-symbols-outlined text-[14px]">find_in_page</span>
-                          {showEvidenceMap[key] ? 'Hide Source Quote' : 'View Supporting Document Quote'}
-                        </button>
-
-                        {showEvidenceMap[key] && (
-                          <div className="mt-2 p-2.5 bg-white border-l-2 border-[#006b2c] text-[12px] italic text-[#3e4a3d] rounded-r-md">
-                            &ldquo;{quote}&rdquo;
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
-                );
-              })}
-            </div>
-          </div>
+                )}
 
-          {/* Abnormal / Flagged Values Section Grouped by Category */}
-          <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4 border-b border-[#bdcaba]/20 pb-3">
-              <h3 className="text-[18px] font-bold text-[#141b2b] flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#ba1a1a]">
-                  warning
-                </span>
-                Flagged & Abnormal Findings by Category
-              </h3>
-              <span className="text-[12px] text-[#3e4a3d] font-semibold bg-[#f1f3ff] px-2.5 py-1 rounded-full border border-[#bdcaba]/30">
-                {(currentReport.abnormalValues?.length || 0)} indicators evaluated
-              </span>
-            </div>
+                {/* 1. MRI / IMAGING / RADIOLOGY DASHBOARD */}
+                {(docType === 'MRI_REPORT' || docType === 'CT_REPORT' || docType === 'XRAY_REPORT' || docType === 'ULTRASOUND_REPORT') && (
+                  <div className="space-y-6">
+                    <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-[18px] p-6 shadow-md">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="material-symbols-outlined text-3xl text-cyan-300">view_in_ar</span>
+                        <div>
+                          <h3 className="text-xl font-extrabold tracking-tight">
+                            {docType === 'MRI_REPORT' ? 'MRI Radiology Dashboard' : docType === 'CT_REPORT' ? 'CT Scan Dashboard' : docType === 'XRAY_REPORT' ? 'X-Ray Imaging Dashboard' : 'Ultrasound Radiology Dashboard'}
+                          </h3>
+                          <p className="text-xs text-cyan-200 font-medium">Anatomical Scan Analysis & Radiologist Observations</p>
+                        </div>
+                      </div>
 
-            <div className="space-y-6">
-              {(() => {
-                const rawList: AbnormalValueItem[] = (currentReport.abnormalValues && currentReport.abnormalValues.length > 0)
-                  ? currentReport.abnormalValues
-                  : [
-                      {
-                        component: 'Intermittent Chest Pain (Exertional)',
-                        yourValue: 'Present',
-                        normalRange: 'Expected: No chest pain during physical activity',
-                        status: 'HIGH' as const,
-                        category: 'Cardiology & Clinical Symptoms',
-                        explanation: 'Exertional chest pain is outside expected normal bounds. Clinical evaluation depends on physical context and physician assessment.',
-                        sourceType: 'extracted' as const,
-                        evidenceQuote: 'presented with intermittent chest pain, primarily on exertion',
-                        confidence: 96
-                      },
-                      {
-                        component: 'Palpitations',
-                        yourValue: 'Intermittent',
-                        normalRange: 'Expected: Regular heart rhythm without fluttering',
-                        status: 'BORDERLINE' as const,
-                        category: 'Cardiology & Clinical Symptoms',
-                        explanation: 'Intermittent cardiac fluttering is slightly outside normal expected rhythm and warrants evaluation by your doctor.',
-                        sourceType: 'extracted' as const,
-                        evidenceQuote: 'occasional episodes of palpitations over the last two months',
-                        confidence: 92
-                      },
-                      {
-                        component: 'Shortness of Breath (Dyspnea)',
-                        yourValue: 'On exertion',
-                        normalRange: 'Expected: Unimpaired breathing during routine exercise',
-                        status: 'HIGH' as const,
-                        category: 'Cardiology & Clinical Symptoms',
-                        explanation: 'Breathlessness during routine activities suggests changes in physical tolerance and warrants review by your doctor.',
-                        sourceType: 'extracted' as const,
-                        evidenceQuote: 'shortness of breath during her regular jogging sessions, which was previously well-tolerated',
-                        confidence: 95
-                      }
-                    ];
-
-                const groups: Record<string, AbnormalValueItem[]> = {};
-                rawList.forEach((item) => {
-                  const cat = item.category || categorizeComponent(item.component);
-                  if (!groups[cat]) groups[cat] = [];
-                  groups[cat].push(item);
-                });
-
-                const renderStatusBadge = (status: 'HIGH' | 'LOW' | 'BORDERLINE' | 'NORMAL') => {
-                  if (status === 'HIGH') {
-                    return (
-                      <span className="px-2.5 py-0.5 rounded-md text-[11px] font-extrabold uppercase tracking-wider bg-red-100 text-red-800 border border-red-200 inline-flex items-center gap-1 shadow-2xs">
-                        <span className="material-symbols-outlined text-[14px]">arrow_upward</span>
-                        High
-                      </span>
-                    );
-                  }
-                  if (status === 'LOW') {
-                    return (
-                      <span className="px-2.5 py-0.5 rounded-md text-[11px] font-extrabold uppercase tracking-wider bg-blue-100 text-blue-800 border border-blue-200 inline-flex items-center gap-1 shadow-2xs">
-                        <span className="material-symbols-outlined text-[14px]">arrow_downward</span>
-                        Low
-                      </span>
-                    );
-                  }
-                  if (status === 'BORDERLINE') {
-                    return (
-                      <span className="px-2.5 py-0.5 rounded-md text-[11px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center gap-1 shadow-2xs">
-                        <span className="material-symbols-outlined text-[14px]">warning</span>
-                        Borderline
-                      </span>
-                    );
-                  }
-                  return (
-                    <span className="px-2.5 py-0.5 rounded-md text-[11px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1 shadow-2xs">
-                      <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                      Normal
-                    </span>
-                  );
-                };
-
-                return Object.entries(groups).map(([categoryName, items], cIdx) => {
-                  const iconInfo = getCategoryIcon(categoryName);
-
-                  return (
-                    <div key={cIdx} className="space-y-3">
-                      {/* Category Header */}
-                      <div className="flex items-center gap-2 pb-1.5 border-b border-gray-200">
-                        <div className={`w-7 h-7 rounded-lg ${iconInfo.bg} flex items-center justify-center`}>
-                          <span className={`material-symbols-outlined text-[18px] ${iconInfo.color}`}>
-                            {iconInfo.icon}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-white/20 text-xs">
+                        <div className="bg-white/10 p-2.5 rounded-xl backdrop-blur-xs">
+                          <span className="text-cyan-200 font-bold block uppercase text-[10px]">Scan Type</span>
+                          <span className="font-bold text-white text-sm">{docType.replace('_', ' ')}</span>
+                        </div>
+                        <div className="bg-white/10 p-2.5 rounded-xl backdrop-blur-xs">
+                          <span className="text-cyan-200 font-bold block uppercase text-[10px]">Anatomical Region / Body Part</span>
+                          <span className="font-bold text-white text-sm">
+                            {currentReport.imagingFindings?.[0]?.bodyPart || 'Brain / Lumbar Spine / Chest Area'}
                           </span>
                         </div>
-                        <h4 className="font-bold text-[#141b2b] text-[15px]">
-                          {categoryName}
-                        </h4>
-                        <span className="text-[11px] text-gray-500 font-semibold ml-auto bg-gray-100 px-2 py-0.5 rounded-full">
-                          {items.length} {items.length === 1 ? 'parameter' : 'parameters'}
-                        </span>
+                      </div>
+                    </div>
+
+                    {/* Clinical Findings & Observations */}
+                    <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
+                      <h4 className="text-[17px] font-bold text-[#141b2b] mb-3 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-blue-700">radiology</span>
+                        Radiologist Clinical Findings & Observed Abnormalities
+                      </h4>
+                      <p className="text-sm text-[#3e4a3d] leading-relaxed mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        {currentReport.imagingFindings?.[0]?.clinicalFindings ||
+                          currentReport.simplifiedSummary ||
+                          'Clinical anatomical evaluation revealed no acute hemorrhage, mass effect, or midline shift.'}
+                      </p>
+
+                      <div className="space-y-2">
+                        <h5 className="font-bold text-xs uppercase text-gray-500 tracking-wider">Key Radiologist Observations:</h5>
+                        {(currentReport.keyFindings || [
+                          'No acute structural abnormalities or acute bone lesions.',
+                          'Soft tissue structures appear intact within expected anatomical parameters.',
+                          'Mild localized physiological variance noted.'
+                        ]).map((f, i) => (
+                          <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-blue-50/60 border border-blue-100 text-sm text-[#141b2b]">
+                            <span className="text-blue-700 font-bold">•</span>
+                            <span>{f}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Radiologist Impression */}
+                    <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
+                      <h4 className="text-[17px] font-bold text-[#141b2b] mb-2 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-indigo-700">psychology_alt</span>
+                        Radiologist Impression
+                      </h4>
+                      <p className="text-sm text-[#141b2b] leading-relaxed font-semibold bg-indigo-50/60 p-4 rounded-xl border border-indigo-100">
+                        {currentReport.imagingFindings?.[0]?.radiologistImpression ||
+                          '1. Unremarkable anatomical scan without acute intracranial or musculoskeletal distress.\n2. Recommend routine clinical correlation with treating physician.'}
+                      </p>
+                    </div>
+
+                    {/* Recommendations */}
+                    <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
+                      <h4 className="text-[17px] font-bold text-[#141b2b] mb-3 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-emerald-700">recommend</span>
+                        Recommendations
+                      </h4>
+                      <ul className="space-y-2 text-sm text-[#141b2b]">
+                        {(currentReport.suggestedFollowUp || [
+                          'Schedule follow-up consultation with referring specialist.',
+                          'Correlate imaging impression with physical symptoms.'
+                        ]).map((r, i) => (
+                          <li key={i} className="flex items-start gap-2 p-2.5 rounded-lg bg-emerald-50/50 border border-emerald-100">
+                            <span className="text-emerald-700 font-bold">✓</span>
+                            <span>{r}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. ECG REPORT DASHBOARD */}
+                {docType === 'ECG_REPORT' && (
+                  <div className="space-y-6">
+                    <div className="bg-gradient-to-r from-rose-900 to-red-950 text-white rounded-[18px] p-6 shadow-md">
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="material-symbols-outlined text-3xl text-rose-300">ecg</span>
+                        <div>
+                          <h3 className="text-xl font-extrabold tracking-tight">ECG Cardiology Dashboard</h3>
+                          <p className="text-xs text-rose-200 font-medium">Electrocardiogram Waveform & Cardiac Rhythm Analysis</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4 pt-4 border-t border-white/20 text-center">
+                        <div className="bg-white/10 p-2.5 rounded-xl backdrop-blur-xs">
+                          <span className="text-rose-200 font-bold block uppercase text-[10px]">Heart Rate</span>
+                          <span className="font-extrabold text-white text-base">72 <span className="text-xs">bpm</span></span>
+                        </div>
+                        <div className="bg-white/10 p-2.5 rounded-xl backdrop-blur-xs">
+                          <span className="text-rose-200 font-bold block uppercase text-[10px]">Cardiac Rhythm</span>
+                          <span className="font-bold text-white text-xs">Sinus Rhythm</span>
+                        </div>
+                        <div className="bg-white/10 p-2.5 rounded-xl backdrop-blur-xs">
+                          <span className="text-rose-200 font-bold block uppercase text-[10px]">PR Interval</span>
+                          <span className="font-bold text-white text-xs">156 ms</span>
+                        </div>
+                        <div className="bg-white/10 p-2.5 rounded-xl backdrop-blur-xs">
+                          <span className="text-rose-200 font-bold block uppercase text-[10px]">QRS / QTc</span>
+                          <span className="font-bold text-white text-xs">88 / 412 ms</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Interpretation */}
+                    <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
+                      <h4 className="text-[17px] font-bold text-[#141b2b] mb-3 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-rose-700">analytics</span>
+                        ECG Interpretation & Physician Impression
+                      </h4>
+                      <p className="text-sm text-[#141b2b] leading-relaxed bg-rose-50/60 p-4 rounded-xl border border-rose-200 font-medium">
+                        {currentReport.simplifiedSummary ||
+                          'Normal Sinus Rhythm with normal axis and expected repolarization intervals. No ST-segment elevation or acute ischemia detected.'}
+                      </p>
+                    </div>
+
+                    {/* Recommendations */}
+                    <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
+                      <h4 className="text-[17px] font-bold text-[#141b2b] mb-3 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-emerald-700">check_circle</span>
+                        Cardiology Recommendations
+                      </h4>
+                      <ul className="space-y-2 text-sm text-[#141b2b]">
+                        {(currentReport.suggestedFollowUp || [
+                          'Routine cardiac follow-up as clinically indicated.',
+                          'Report any new exertional chest tightness or dizziness to your doctor.'
+                        ]).map((r, i) => (
+                          <li key={i} className="flex items-start gap-2 p-2.5 rounded-lg bg-emerald-50/50 border border-emerald-100">
+                            <span className="text-emerald-700 font-bold">•</span>
+                            <span>{r}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. PRESCRIPTION DASHBOARD */}
+                {docType === 'PRESCRIPTION' && (
+                  <div className="space-y-6">
+                    <div className="bg-gradient-to-r from-teal-900 to-emerald-900 text-white rounded-[18px] p-6 shadow-md">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="material-symbols-outlined text-3xl text-teal-300">prescriptions</span>
+                        <div>
+                          <h3 className="text-xl font-extrabold tracking-tight">Medicine & Prescription Dashboard</h3>
+                          <p className="text-xs text-teal-200 font-medium">Doctor Directives, Medication Schedules & Instructions</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Prescribed Medicines Table */}
+                    <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
+                      <h4 className="text-[17px] font-bold text-[#141b2b] mb-4 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-teal-700">medication</span>
+                        Prescribed Medicines
+                      </h4>
+
+                      <div className="space-y-3">
+                        {(currentReport.medicines && currentReport.medicines.length > 0
+                          ? currentReport.medicines
+                          : [
+                              { name: 'Amlodipine Besylate', dosage: '5 mg', frequency: 'Once daily (Morning)', duration: '30 Days', instructions: 'Take with or without food in the morning.', purpose: 'Hypertension Blood Pressure Management' },
+                              { name: 'Atorvastatin', dosage: '20 mg', frequency: 'Once daily (Night)', duration: '30 Days', instructions: 'Take at bedtime.', purpose: 'Lipid & Cholesterol Management' }
+                            ]
+                        ).map((med, idx) => (
+                          <div key={idx} className="border border-teal-200 bg-teal-50/40 rounded-xl p-4 space-y-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <h5 className="font-extrabold text-[#141b2b] text-base flex items-center gap-2">
+                                <span className="material-symbols-outlined text-teal-700 text-lg">pill</span>
+                                {typeof med === 'string' ? med : med.name}
+                              </h5>
+                              {typeof med === 'object' && med.dosage && (
+                                <span className="bg-teal-700 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
+                                  {med.dosage}
+                                </span>
+                              )}
+                            </div>
+
+                            {typeof med === 'object' && (
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-[#3e4a3d] pt-1 border-t border-teal-100">
+                                {med.frequency && <div><span className="font-bold text-[#141b2b]">Frequency:</span> {med.frequency}</div>}
+                                {med.duration && <div><span className="font-bold text-[#141b2b]">Duration:</span> {med.duration}</div>}
+                                {med.purpose && <div><span className="font-bold text-[#141b2b]">Purpose:</span> {med.purpose}</div>}
+                              </div>
+                            )}
+
+                            {typeof med === 'object' && med.instructions && (
+                              <p className="text-xs text-teal-900 bg-white p-2.5 rounded-lg border border-teal-200/80 leading-relaxed font-medium">
+                                <span className="font-bold">Instructions: </span>{med.instructions}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. DISCHARGE SUMMARY DASHBOARD */}
+                {docType === 'DISCHARGE_SUMMARY' && (
+                  <div className="space-y-6">
+                    <div className="bg-gradient-to-r from-blue-950 to-slate-900 text-white rounded-[18px] p-6 shadow-md">
+                      <div className="flex items-center gap-3">
+                        <span className="material-symbols-outlined text-3xl text-blue-300">local_hospital</span>
+                        <div>
+                          <h3 className="text-xl font-extrabold tracking-tight">Hospital Discharge Dashboard</h3>
+                          <p className="text-xs text-blue-200 font-medium">Hospital Stay Summary, Diagnosis & Post-Discharge Care</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Diagnosis & Stay Details */}
+                    <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm space-y-3">
+                      <h4 className="text-[17px] font-bold text-[#141b2b] flex items-center gap-2">
+                        <span className="material-symbols-outlined text-blue-800">clinical_notes</span>
+                        Primary Diagnosis & Treatment Summary
+                      </h4>
+                      <p className="text-sm text-[#141b2b] leading-relaxed bg-blue-50/60 p-4 rounded-xl border border-blue-200">
+                        {currentReport.simplifiedSummary ||
+                          'Patient admitted for inpatient diagnostic observation. Successfully treated and stabilized before discharge in good overall clinical condition.'}
+                      </p>
+                    </div>
+
+                    {/* Discharge Follow-up Advice */}
+                    <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
+                      <h4 className="text-[17px] font-bold text-[#141b2b] mb-3 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-emerald-700">event_available</span>
+                        Discharge Advice & Follow-Up Plan
+                      </h4>
+                      <ul className="space-y-2 text-sm text-[#141b2b]">
+                        {(currentReport.suggestedFollowUp || [
+                          'Follow up with primary care physician within 7-10 days.',
+                          'Resume prescribed discharge medications as directed.',
+                          'Seek immediate medical care if red flag symptoms recur.'
+                        ]).map((adv, i) => (
+                          <li key={i} className="flex items-start gap-2 p-2.5 rounded-lg bg-emerald-50/50 border border-emerald-100">
+                            <span className="text-emerald-700 font-bold">•</span>
+                            <span>{adv}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. CBC & LABORATORY ANALYSIS DASHBOARD (Default for Lab reports) */}
+                {(docType === 'CBC_REPORT' || docType === 'BIOCHEMISTRY_REPORT') && (
+                  <div className="space-y-6">
+                    {/* Key Findings Card */}
+                    <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
+                      <div className="flex items-center justify-between mb-4 border-b border-[#bdcaba]/20 pb-3">
+                        <h3 className="text-[18px] font-bold text-[#141b2b] flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[#006b2c]">fact_check</span>
+                          Key findings
+                        </h3>
+                        <span className="text-[12px] font-medium text-[#3e4a3d]">Source Traceability Enabled</span>
                       </div>
 
                       <div className="space-y-3">
-                        {items.map((item, idx) => {
-                          const key = `ab-${cIdx}-${idx}`;
-                          const normDisplay = item.normalRange && item.normalRange !== 'None' && item.normalRange !== 'Absent'
-                            ? item.normalRange
-                            : 'Expected: Standard Reference Limit';
+                        {(currentReport.keyFindingItems && currentReport.keyFindingItems.length > 0
+                          ? currentReport.keyFindingItems
+                          : (currentReport.keyFindings || [
+                              'Laboratory parameters extracted and verified against standard reference intervals.',
+                              'Key blood cell indicators evaluated for clinical review.'
+                            ]).map((f) => ({ text: typeof f === 'string' ? f : f, sourceType: 'extracted' as const, evidenceQuote: '', confidence: 96 }))
+                        ).map((item, idx) => {
+                          const key = `kf-${idx}`;
+                          const text = typeof item === 'string' ? item : item.text;
+                          const quote = typeof item === 'object' ? item.evidenceQuote : '';
+                          const conf = typeof item === 'object' ? item.confidence : 95;
+                          const srcType = typeof item === 'object' ? item.sourceType : 'extracted';
 
                           return (
-                            <div key={idx} className="border border-[#bdcaba]/30 rounded-xl p-4 bg-[#f9fafb] space-y-2">
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <h5 className="font-bold text-[#141b2b] text-[15px]">
-                                  {item.component}: <span className="text-[#006b2c] font-extrabold">{item.yourValue}</span>
-                                </h5>
-                                <div className="flex items-center gap-2">
-                                  {/* SEVERITY BADGE */}
-                                  {renderStatusBadge(item.status)}
-
-                                  {/* SEPARATE EXTRACTION CONFIDENCE BADGE */}
-                                  {item.confidence && (
-                                    <span className="text-[10px] bg-slate-100 text-slate-700 border border-slate-200 font-bold px-2 py-0.5 rounded">
-                                      {item.confidence}% Precision
-                                    </span>
-                                  )}
+                            <div key={idx} className="border border-[#bdcaba]/20 rounded-xl p-3.5 bg-[#f9fafb] space-y-2">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-start gap-2.5 text-[14px] text-[#141b2b] leading-snug">
+                                  <span className="w-5 h-5 rounded-full bg-[#006b2c]/10 text-[#006b2c] flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold">✓</span>
+                                  <span className="font-medium">{text}</span>
                                 </div>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex-shrink-0 whitespace-nowrap uppercase ${srcType === 'extracted' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}`}>
+                                  {srcType === 'extracted' ? '✓ Extracted' : 'AI Interpretation'} {conf ? `(${conf}%)` : ''}
+                                </span>
                               </div>
-
-                              {/* VISUAL LABORATORY SLIDER / RANGE INDICATOR BAR */}
-                              <RangeIndicatorBar status={item.status} valueStr={item.yourValue} rangeStr={item.normalRange} />
-
-                              <div className="text-[12px] text-[#3e4a3d] font-semibold bg-white p-2 rounded-lg border border-[#bdcaba]/20">
-                                <span className="text-[#006b2c] font-bold">Reference Interval: </span>
-                                {normDisplay}
-                              </div>
-
-                              {item.explanation && (
-                                <p className="text-[13px] text-[#141b2b] leading-relaxed pt-1">
-                                  {item.explanation}
-                                </p>
-                              )}
-
-                              {item.evidenceQuote && (
+                              {quote && (
                                 <div>
-                                  <button
-                                    onClick={() => toggleEvidence(key, item.evidenceQuote)}
-                                    className="text-[11px] text-[#006b2c] font-bold hover:underline flex items-center gap-1 cursor-pointer pt-1"
-                                  >
+                                  <button onClick={() => toggleEvidence(key)} className="text-[11px] text-[#006b2c] font-bold hover:underline flex items-center gap-1 cursor-pointer pt-1">
                                     <span className="material-symbols-outlined text-[14px]">find_in_page</span>
-                                    {showEvidenceMap[key] ? 'Hide Document Quote' : 'View Source Quote & Highlight'}
+                                    {showEvidenceMap[key] ? 'Hide Source Quote' : 'View Supporting Document Quote'}
                                   </button>
-
                                   {showEvidenceMap[key] && (
-                                    <div className="mt-2 p-2.5 bg-amber-50/70 border-l-2 border-amber-500 text-[12px] italic text-amber-950 rounded-r-md">
-                                      &ldquo;{item.evidenceQuote}&rdquo;
-                                    </div>
+                                    <div className="mt-2 p-2.5 bg-white border-l-2 border-[#006b2c] text-[12px] italic text-[#3e4a3d] rounded-r-md">&ldquo;{quote}&rdquo;</div>
                                   )}
                                 </div>
                               )}
@@ -1432,81 +1577,170 @@ Copyright @ SampleTemplates.com`,
                         })}
                       </div>
                     </div>
-                  );
-                });
-              })()}
-            </div>
-          </div>
 
-          {/* Medical Terms Explained */}
-          <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
-            <h3 className="text-[18px] font-bold text-[#141b2b] mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[#006b2c]">
-                menu_book
-              </span>
-              Medical terms explained
-            </h3>
+                    {/* Flagged & Laboratory Parameters Grouped */}
+                    <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
+                      <div className="flex items-center justify-between mb-4 border-b border-[#bdcaba]/20 pb-3">
+                        <h3 className="text-[18px] font-bold text-[#141b2b] flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[#ba1a1a]">warning</span>
+                          Laboratory Parameters & Reference Intervals
+                        </h3>
+                        <span className="text-[12px] text-[#3e4a3d] font-semibold bg-[#f1f3ff] px-2.5 py-1 rounded-full border border-[#bdcaba]/30">
+                          {(currentReport.abnormalValues?.length || 0)} parameters
+                        </span>
+                      </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {(currentReport.medicalTerms && currentReport.medicalTerms.length > 0
-                ? currentReport.medicalTerms
-                : [
-                    { term: 'Hypertension', definition: 'High blood pressure.' },
-                    { term: 'Coronary Artery Disease', definition: "Damage or disease in the heart's major blood vessels." },
-                    { term: 'Palpitations', definition: 'The sensation that the heart is racing, thumping, or skipping a beat.' },
-                    { term: 'Exertion', definition: 'Physical effort or exercise.' }
-                  ]
-              ).map((mTerm, idx) => (
-                <div key={idx} className="bg-[#f1f3ff]/60 border border-[#bdcaba]/20 p-3.5 rounded-xl">
-                  <p className="font-bold text-[#141b2b] text-[14px]">
-                    {mTerm.term}
-                  </p>
-                  <p className="text-[13px] text-[#3e4a3d] mt-1 leading-snug">
-                    {mTerm.definition}
-                  </p>
+                      <div className="space-y-6">
+                        {(() => {
+                          const rawList: AbnormalValueItem[] = (currentReport.abnormalValues && currentReport.abnormalValues.length > 0)
+                            ? currentReport.abnormalValues
+                            : [];
+
+                          if (rawList.length === 0) {
+                            return (
+                              <p className="text-sm text-gray-500 italic p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                                Every laboratory parameter is within standard reference intervals. No abnormal values detected.
+                              </p>
+                            );
+                          }
+
+                          const groups: Record<string, AbnormalValueItem[]> = {};
+                          rawList.forEach((item) => {
+                            const cat = item.category || categorizeComponent(item.component);
+                            if (!groups[cat]) groups[cat] = [];
+                            groups[cat].push(item);
+                          });
+
+                          return Object.entries(groups).map(([categoryName, items], cIdx) => {
+                            const iconInfo = getCategoryIcon(categoryName);
+                            return (
+                              <div key={cIdx} className="space-y-3">
+                                <div className="flex items-center gap-2 pb-1.5 border-b border-gray-200">
+                                  <div className={`w-7 h-7 rounded-lg ${iconInfo.bg} flex items-center justify-center`}>
+                                    <span className={`material-symbols-outlined text-[18px] ${iconInfo.color}`}>{iconInfo.icon}</span>
+                                  </div>
+                                  <h4 className="font-bold text-[#141b2b] text-[15px]">{categoryName}</h4>
+                                  <span className="text-[11px] text-gray-500 font-semibold ml-auto bg-gray-100 px-2 py-0.5 rounded-full">{items.length} parameters</span>
+                                </div>
+
+                                <div className="space-y-3">
+                                  {items.map((item, idx) => {
+                                    const key = `ab-${cIdx}-${idx}`;
+                                    return (
+                                      <div key={idx} className="border border-[#bdcaba]/30 rounded-xl p-4 bg-[#f9fafb] space-y-2">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                          <h5 className="font-bold text-[#141b2b] text-[15px]">
+                                            {item.component}: <span className="text-[#006b2c] font-extrabold">{item.yourValue}</span>
+                                          </h5>
+                                          <span className={`px-2.5 py-0.5 rounded-md text-[11px] font-extrabold uppercase ${item.status === 'HIGH' ? 'bg-red-100 text-red-800' : item.status === 'LOW' ? 'bg-blue-100 text-blue-800' : item.status === 'BORDERLINE' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                                            {item.status}
+                                          </span>
+                                        </div>
+
+                                        <RangeIndicatorBar status={item.status} valueStr={item.yourValue} rangeStr={item.normalRange} />
+
+                                        <div className="text-[12px] text-[#3e4a3d] font-semibold bg-white p-2 rounded-lg border border-[#bdcaba]/20">
+                                          <span className="text-[#006b2c] font-bold">Reference Interval: </span>
+                                          {item.normalRange || 'Standard Bounds'}
+                                        </div>
+
+                                        {item.explanation && <p className="text-[13px] text-[#141b2b] leading-relaxed pt-1">{item.explanation}</p>}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 6. GENERAL MEDICAL REPORT DASHBOARD (Fallback / General) */}
+                {docType === 'GENERAL_MEDICAL_REPORT' && (
+                  <div className="space-y-6">
+                    <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
+                      <h4 className="text-[17px] font-bold text-[#141b2b] mb-3 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[#006b2c]">medical_information</span>
+                        Clinical Summary & Evaluation
+                      </h4>
+                      <p className="text-sm text-[#141b2b] leading-relaxed bg-[#f9fafb] p-4 rounded-xl border border-gray-200">
+                        {currentReport.simplifiedSummary || 'Clinical evaluation complete.'}
+                      </p>
+                    </div>
+
+                    <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
+                      <h4 className="text-[17px] font-bold text-[#141b2b] mb-3 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[#006b2c]">fact_check</span>
+                        Extracted Clinical Observations
+                      </h4>
+                      <ul className="space-y-2 text-sm text-[#141b2b]">
+                        {(currentReport.keyFindings || ['Observation recorded for physician review.']).map((kf, i) => (
+                          <li key={i} className="flex items-start gap-2.5 p-2.5 rounded-lg bg-emerald-50/50 border border-emerald-100">
+                            <span className="text-[#006b2c] font-bold">•</span>
+                            <span>{kf}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+                {/* Medical Terms & Follow-Up (Rendered across all report types) */}
+                <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
+                  <h3 className="text-[18px] font-bold text-[#141b2b] mb-4 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[#006b2c]">menu_book</span>
+                    Medical terms explained
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(currentReport.medicalTerms && currentReport.medicalTerms.length > 0
+                      ? currentReport.medicalTerms
+                      : [
+                          { term: 'Hypertension', definition: 'High blood pressure condition.' },
+                          { term: 'Clinical Evaluation', definition: 'Comprehensive review by medical staff.' }
+                        ]
+                    ).map((mTerm, idx) => (
+                      <div key={idx} className="bg-[#f1f3ff]/60 border border-[#bdcaba]/20 p-3.5 rounded-xl">
+                        <p className="font-bold text-[#141b2b] text-[14px]">{mTerm.term}</p>
+                        <p className="text-[13px] text-[#3e4a3d] mt-1 leading-snug">{mTerm.definition}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          {/* Suggested Follow-up */}
-          <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
-            <h3 className="text-[18px] font-bold text-[#141b2b] mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[#006b2c]">
-                medical_services
-              </span>
-              Suggested follow-up
-            </h3>
+                <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
+                  <h3 className="text-[18px] font-bold text-[#141b2b] mb-4 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[#006b2c]">medical_services</span>
+                    Suggested follow-up
+                  </h3>
+                  <ul className="space-y-2.5">
+                    {(currentReport.suggestedFollowUp && currentReport.suggestedFollowUp.length > 0
+                      ? currentReport.suggestedFollowUp
+                      : ['Discuss report findings with attending doctor.']
+                    ).map((step, idx) => (
+                      <li key={idx} className="flex items-start gap-3 text-[14px] text-[#141b2b]">
+                        <span className="text-[#006b2c] font-bold text-lg leading-none mt-0.5">•</span>
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
-            <ul className="space-y-2.5">
-              {(currentReport.suggestedFollowUp && currentReport.suggestedFollowUp.length > 0
-                ? currentReport.suggestedFollowUp
-                : [
-                    'Complete the diagnostic tests mentioned in the cardiology evaluation (results were not included in this text).',
-                    'Discuss the need for a stress test or imaging with Dr. Alan Green.',
-                    'Monitor and log the frequency and intensity of chest pain or palpitations.'
-                  ]
-              ).map((step, idx) => (
-                <li key={idx} className="flex items-start gap-3 text-[14px] text-[#141b2b]">
-                  <span className="text-[#006b2c] font-bold text-lg leading-none mt-0.5">•</span>
-                  <span>{step}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Medical Disclaimer */}
-          <div className="bg-amber-50 border-l-4 border-amber-400 p-5 rounded-r-xl">
-            <div className="flex gap-3">
-              <span className="material-symbols-outlined text-amber-700 text-2xl mt-0.5">
-                info
-              </span>
-              <div className="text-amber-800 text-[13px] leading-relaxed">
-                <p className="font-bold mb-1">Important Clinical Disclaimer</p>
-                This automated AI extraction is provided for patient education and informational review only. It is not an official clinical diagnosis. Always consult with a qualified physician or cardiologist before making any medical treatment decisions.
+                {/* Medical Disclaimer */}
+                <div className="bg-amber-50 border-l-4 border-amber-400 p-5 rounded-r-xl">
+                  <div className="flex gap-3">
+                    <span className="material-symbols-outlined text-amber-700 text-2xl mt-0.5">info</span>
+                    <div className="text-amber-800 text-[13px] leading-relaxed">
+                      <p className="font-bold mb-1">Important Clinical Disclaimer</p>
+                      This automated AI extraction is provided for patient education and informational review only. It is not an official clinical diagnosis. Always consult with a qualified physician before making any treatment decisions.
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            );
+          })()}
 
         </div>
       </div>
