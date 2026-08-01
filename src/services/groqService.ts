@@ -11,7 +11,7 @@ export async function analyzeWithGroq(
     throw new Error('GROQ_API_KEY is not configured in environment variables');
   }
 
-  const systemPrompt = buildMedicalSystemPrompt();
+  const systemPrompt = buildMedicalSystemPrompt(filename, text);
   const userPrompt = buildMedicalUserPrompt(text, filename);
 
   const response = await axios.post(

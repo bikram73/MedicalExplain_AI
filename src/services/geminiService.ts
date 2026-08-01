@@ -22,7 +22,7 @@ export async function analyzeWithGemini(
     },
   });
 
-  const systemPrompt = buildMedicalSystemPrompt();
+  const systemPrompt = buildMedicalSystemPrompt(filename, text);
   const userPrompt = buildMedicalUserPrompt(text, filename);
 
   let contents: any;

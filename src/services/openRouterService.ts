@@ -11,7 +11,7 @@ export async function analyzeWithOpenRouter(
     throw new Error('OPENROUTER_API_KEY is not configured in environment variables');
   }
 
-  const systemPrompt = buildMedicalSystemPrompt();
+  const systemPrompt = buildMedicalSystemPrompt(filename, text);
   const userPrompt = buildMedicalUserPrompt(text, filename);
 
   const openRouterModels = [
