@@ -1,0 +1,6 @@
+{
+  "name": "MedExplain AI",
+  "description": "Professional medical report analysis and AI-powered report decoder application.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

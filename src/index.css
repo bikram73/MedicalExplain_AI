@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+
+  .ai-explainer-panel,
+  .ai-explainer-gradient,
+  .ai-gradient-panel {
+    background: linear-gradient(180deg, #F0FDF4 0%, #FFFFFF 100%);
+    border-left: 3px dotted #006b2c;
+  }
+
+  .glass-card,
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(0, 107, 44, 0.2);
+    box-shadow: 0 12px 32px -4px rgba(20, 27, 43, 0.15), 0 4px 12px -2px rgba(20, 27, 43, 0.08);
+  }
+
+  .upload-dashed-border {
+    background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='18' ry='18' stroke='%23006B2C' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+    border-radius: 18px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f3ff;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #bdcaba;
+    border-radius: 10px;
+  }
+
+  .floating-anim {
+    animation: floating 3s ease-in-out infinite;
+  }
+
+  @keyframes floating {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .gauge-transition {
+    transition: stroke-dashoffset 1s ease-out;
+  }
+
+  .floating-ai-btn {
+    box-shadow: 0 10px 25px -5px rgba(22, 163, 74, 0.3);
+  }
+
+  .card-glow {
+    transition: all 0.2s ease-out;
+  }
+  .card-glow:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px -5px rgba(22, 163, 74, 0.08);
+  }
+}
+
