@@ -34,6 +34,7 @@ function getCanonicalDocType(docType?: string, filename?: string, text?: string)
   if (str.includes('discharge')) return 'DISCHARGE_SUMMARY';
   if (str.includes('cbc') || str.includes('hematology') || str.includes('blood count')) return 'CBC_REPORT';
   if (str.includes('biochemistry') || str.includes('lipid') || str.includes('liver') || str.includes('kidney') || str.includes('metabolic')) return 'BIOCHEMISTRY_REPORT';
+  if (str.includes('consultation') || str.includes('cardiology') || str.includes('evaluation') || str.includes('consult')) return 'CONSULTATION_NOTE';
   return 'GENERAL_MEDICAL_REPORT';
 }
 
@@ -153,8 +154,17 @@ export const AnalyzerDashboardPage: React.FC<AnalyzerDashboardPageProps> = ({
     date: '03/10/2026',
     type: 'Cardiology Evaluation Report',
     fileSize: '1.2 MB',
-    riskLevel: 'HIGH',
-    findingsCount: 3,
+    riskLevel: 'MODERATE',
+    riskReason: [
+      'Multiple cardiovascular symptoms documented (exertional chest pain, palpitations, shortness of breath)',
+      'History of hypertension and family history of CAD',
+      'Diagnostic evaluation pending'
+    ],
+    missingSections: [
+      'Diagnostic test results (e.g., ECG or stress test graphs) were not included in the uploaded report.'
+    ],
+    overallConfidence: 96,
+    findingsCount: 4,
     fileType: 'pdf',
     imageSrc: DEFAULT_FALLBACK_IMAGE,
     extractedText: `Medical Reports of Patients
@@ -178,45 +188,68 @@ Ms. Johnson presented with intermittent chest pain, primarily on exertion, and o
 
 Diagnostic Tests Conducted:
 Copyright @ SampleTemplates.com`,
-    simplifiedSummary: `Emily Johnson was evaluated for new symptoms of chest pain and shortness of breath that occur during exercise. While she has a history of high blood pressure, these new symptoms require further investigation to ensure her heart is functioning correctly during physical activity. The clinical focus is on determining the cause of her chest pain and managing her cardiac health.`,
+    simplifiedSummary: `Emily Johnson was evaluated for new symptoms of chest pain and shortness of breath that occur during exercise. While she has a history of high blood pressure, these new symptoms require further investigation to ensure her heart is functioning correctly during physical activity.`,
     keyFindings: [
       'New onset of chest pain and shortness of breath during exercise.',
-      'History of high blood pressure (hypertension) currently managed by medication.',
-      'Family history of heart disease (father).',
-      'Recent episodes of heart palpitations.'
+      'History of high blood pressure (hypertension) documented.',
+      'Family history of coronary artery disease (father).',
+      'Recent episodes of heart palpitations over the last two months.'
     ],
     abnormalValues: [
       {
         component: 'Intermittent Chest Pain (Exertional)',
         yourValue: 'Present',
-        normalRange: 'None',
+        normalRange: 'Expected: No chest pain during physical activity',
         status: 'HIGH',
-        explanation: "Chest pain experienced during physical activity can indicate that the heart muscle isn't getting enough oxygen-rich blood during exertion."
+        category: 'Cardiology & Clinical Symptoms',
+        explanation: 'Exertional chest pain is outside the expected normal state. Clinical evaluation depends on physical context and physician assessment.',
+        sourceType: 'extracted',
+        evidenceQuote: 'presented with intermittent chest pain, primarily on exertion',
+        confidence: 96
       },
       {
         component: 'Palpitations',
         yourValue: 'Intermittent',
-        normalRange: 'None',
+        normalRange: 'Expected: Regular heart rhythm',
         status: 'BORDERLINE',
-        explanation: 'A feeling of a racing or fluttering heart, which may indicate a change in heart rhythm.'
+        category: 'Cardiology & Clinical Symptoms',
+        explanation: 'Intermittent cardiac fluttering is slightly outside normal expected rhythm.',
+        sourceType: 'extracted',
+        evidenceQuote: 'occasional episodes of palpitations over the last two months',
+        confidence: 92
       },
       {
         component: 'Shortness of Breath (Dyspnea)',
         yourValue: 'On exertion',
-        normalRange: 'None',
+        normalRange: 'Expected: Unimpaired breathing during routine exercise',
         status: 'HIGH',
-        explanation: 'Breathlessness during activities (like jogging) that used to be easy suggests a change in cardiovascular fitness or heart function.'
+        category: 'Cardiology & Clinical Symptoms',
+        explanation: 'Breathlessness during exercise suggests changes in physical tolerance.',
+        sourceType: 'extracted',
+        evidenceQuote: 'shortness of breath during her regular jogging sessions',
+        confidence: 95
+      },
+      {
+        component: 'History of Hypertension',
+        yourValue: 'Documented in History',
+        normalRange: 'Expected: No history of hypertension',
+        status: 'BORDERLINE',
+        category: 'Cardiology & Clinical Symptoms',
+        explanation: 'History of hypertension documented in medical record. No current blood pressure measurement was recorded in this report.',
+        sourceType: 'extracted',
+        evidenceQuote: 'history of hypertension, diagnosed three years ago',
+        confidence: 94
       }
     ],
     medicalTerms: [
-      { term: 'Hypertension', definition: 'High blood pressure.' },
+      { term: 'Hypertension', definition: 'High blood pressure condition.' },
       { term: 'Coronary Artery Disease', definition: "Damage or disease in the heart's major blood vessels." },
       { term: 'Palpitations', definition: 'The sensation that the heart is racing, thumping, or skipping a beat.' },
       { term: 'Exertion', definition: 'Physical effort or exercise.' }
     ],
     suggestedFollowUp: [
-      'Complete the diagnostic tests mentioned in the cardiology evaluation (results were not included in this text).',
-      'Discuss the need for a stress test or imaging with Dr. Alan Green.',
+      'Complete objective cardiac diagnostic testing (e.g., ECG, echocardiogram, or exercise stress test).',
+      'Discuss symptoms and stress testing with Dr. Alan Green.',
       'Monitor and log the frequency and intensity of chest pain or palpitations.'
     ]
   };
@@ -1213,12 +1246,8 @@ Copyright @ SampleTemplates.com`,
               currentReport.extractedText
             );
 
-            // Vital Signs (if present)
-            const vitals: VitalSigns | undefined = currentReport.vitalSigns || (
-              currentReport.extractedText?.toLowerCase().includes('blood pressure') || currentReport.extractedText?.toLowerCase().includes('bp:')
-                ? { bloodPressure: { systolic: 120, diastolic: 80 }, heartRate: 72, oxygenSaturation: 98 }
-                : undefined
-            );
+            // Vital Signs (only if explicitly provided in currentReport)
+            const vitals: VitalSigns | undefined = currentReport.vitalSigns;
 
             return (
               <div className="space-y-6">
@@ -1436,41 +1465,41 @@ Copyright @ SampleTemplates.com`,
                       </h4>
 
                       <div className="space-y-3">
-                        {(currentReport.medicines && currentReport.medicines.length > 0
-                          ? currentReport.medicines
-                          : [
-                              { name: 'Amlodipine Besylate', dosage: '5 mg', frequency: 'Once daily (Morning)', duration: '30 Days', instructions: 'Take with or without food in the morning.', purpose: 'Hypertension Blood Pressure Management' },
-                              { name: 'Atorvastatin', dosage: '20 mg', frequency: 'Once daily (Night)', duration: '30 Days', instructions: 'Take at bedtime.', purpose: 'Lipid & Cholesterol Management' }
-                            ]
-                        ).map((med, idx) => (
-                          <div key={idx} className="border border-teal-200 bg-teal-50/40 rounded-xl p-4 space-y-2">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <h5 className="font-extrabold text-[#141b2b] text-base flex items-center gap-2">
-                                <span className="material-symbols-outlined text-teal-700 text-lg">pill</span>
-                                {typeof med === 'string' ? med : med.name}
-                              </h5>
-                              {typeof med === 'object' && med.dosage && (
-                                <span className="bg-teal-700 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
-                                  {med.dosage}
-                                </span>
+                        {currentReport.medicines && currentReport.medicines.length > 0 ? (
+                          currentReport.medicines.map((med, idx) => (
+                            <div key={idx} className="border border-teal-200 bg-teal-50/40 rounded-xl p-4 space-y-2">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <h5 className="font-extrabold text-[#141b2b] text-base flex items-center gap-2">
+                                  <span className="material-symbols-outlined text-teal-700 text-lg">pill</span>
+                                  {typeof med === 'string' ? med : med.name}
+                                </h5>
+                                {typeof med === 'object' && med.dosage && (
+                                  <span className="bg-teal-700 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
+                                    {med.dosage}
+                                  </span>
+                                )}
+                              </div>
+
+                              {typeof med === 'object' && (
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-[#3e4a3d] pt-1 border-t border-teal-100">
+                                  {med.frequency && <div><span className="font-bold text-[#141b2b]">Frequency:</span> {med.frequency}</div>}
+                                  {med.duration && <div><span className="font-bold text-[#141b2b]">Duration:</span> {med.duration}</div>}
+                                  {med.purpose && <div><span className="font-bold text-[#141b2b]">Purpose:</span> {med.purpose}</div>}
+                                </div>
+                              )}
+
+                              {typeof med === 'object' && med.instructions && (
+                                <p className="text-xs text-teal-900 bg-white p-2.5 rounded-lg border border-teal-200/80 leading-relaxed font-medium">
+                                  <span className="font-bold">Instructions: </span>{med.instructions}
+                                </p>
                               )}
                             </div>
-
-                            {typeof med === 'object' && (
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-[#3e4a3d] pt-1 border-t border-teal-100">
-                                {med.frequency && <div><span className="font-bold text-[#141b2b]">Frequency:</span> {med.frequency}</div>}
-                                {med.duration && <div><span className="font-bold text-[#141b2b]">Duration:</span> {med.duration}</div>}
-                                {med.purpose && <div><span className="font-bold text-[#141b2b]">Purpose:</span> {med.purpose}</div>}
-                              </div>
-                            )}
-
-                            {typeof med === 'object' && med.instructions && (
-                              <p className="text-xs text-teal-900 bg-white p-2.5 rounded-lg border border-teal-200/80 leading-relaxed font-medium">
-                                <span className="font-bold">Instructions: </span>{med.instructions}
-                              </p>
-                            )}
-                          </div>
-                        ))}
+                          ))
+                        ) : (
+                          <p className="text-sm text-[#3e4a3d] italic bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            No prescribed medications were mentioned in the uploaded report.
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1658,8 +1687,8 @@ Copyright @ SampleTemplates.com`,
                   </div>
                 )}
 
-                {/* 6. GENERAL MEDICAL REPORT DASHBOARD (Fallback / General) */}
-                {docType === 'GENERAL_MEDICAL_REPORT' && (
+                {/* 6. CONSULTATION NOTE & GENERAL MEDICAL REPORT DASHBOARD */}
+                {(docType === 'CONSULTATION_NOTE' || docType === 'GENERAL_MEDICAL_REPORT') && (
                   <div className="space-y-6">
                     <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
                       <h4 className="text-[17px] font-bold text-[#141b2b] mb-3 flex items-center gap-2">
@@ -1672,19 +1701,98 @@ Copyright @ SampleTemplates.com`,
                     </div>
 
                     <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
-                      <h4 className="text-[17px] font-bold text-[#141b2b] mb-3 flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[#006b2c]">fact_check</span>
-                        Extracted Clinical Observations
-                      </h4>
-                      <ul className="space-y-2 text-sm text-[#141b2b]">
-                        {(currentReport.keyFindings || ['Observation recorded for physician review.']).map((kf, i) => (
-                          <li key={i} className="flex items-start gap-2.5 p-2.5 rounded-lg bg-emerald-50/50 border border-emerald-100">
-                            <span className="text-[#006b2c] font-bold">•</span>
-                            <span>{kf}</span>
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="flex items-center justify-between mb-4 border-b border-[#bdcaba]/20 pb-3">
+                        <h3 className="text-[18px] font-bold text-[#141b2b] flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[#006b2c]">fact_check</span>
+                          Extracted Clinical Observations & Findings
+                        </h3>
+                        <span className="text-[12px] font-medium text-[#3e4a3d]">Source Traceability Enabled</span>
+                      </div>
+
+                      <div className="space-y-3">
+                        {(currentReport.keyFindingItems && currentReport.keyFindingItems.length > 0
+                          ? currentReport.keyFindingItems
+                          : (currentReport.keyFindings || ['Observation recorded for physician review.']).map((f) => ({
+                              text: typeof f === 'string' ? f : f,
+                              sourceType: 'extracted' as const,
+                              evidenceQuote: '',
+                              confidence: 95
+                            }))
+                        ).map((item, idx) => {
+                          const key = `kf-gen-${idx}`;
+                          const text = typeof item === 'string' ? item : item.text;
+                          const quote = typeof item === 'object' ? item.evidenceQuote : '';
+                          const conf = typeof item === 'object' ? item.confidence : 95;
+                          const srcType = typeof item === 'object' ? item.sourceType : 'extracted';
+
+                          return (
+                            <div key={idx} className="border border-[#bdcaba]/20 rounded-xl p-3.5 bg-[#f9fafb] space-y-2">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-start gap-2.5 text-[14px] text-[#141b2b] leading-snug">
+                                  <span className="w-5 h-5 rounded-full bg-[#006b2c]/10 text-[#006b2c] flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold">✓</span>
+                                  <span className="font-medium">{text}</span>
+                                </div>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex-shrink-0 whitespace-nowrap uppercase ${srcType === 'extracted' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}`}>
+                                  {srcType === 'extracted' ? '✓ Extracted' : 'AI Interpretation'} {conf ? `(${conf}%)` : ''}
+                                </span>
+                              </div>
+                              {quote && (
+                                <div>
+                                  <button onClick={() => toggleEvidence(key, quote)} className="text-[11px] text-[#006b2c] font-bold hover:underline flex items-center gap-1 cursor-pointer pt-1">
+                                    <span className="material-symbols-outlined text-[14px]">find_in_page</span>
+                                    {showEvidenceMap[key] ? 'Hide Source Quote' : 'View Supporting Document Quote'}
+                                  </button>
+                                  {showEvidenceMap[key] && (
+                                    <div className="mt-2 p-2.5 bg-white border-l-2 border-[#006b2c] text-[12px] italic text-[#3e4a3d] rounded-r-md">&ldquo;{quote}&rdquo;</div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
+
+                    {/* Documented Symptoms & History Observations */}
+                    {currentReport.abnormalValues && currentReport.abnormalValues.length > 0 && (
+                      <div className="bg-white border border-[#bdcaba]/30 rounded-[18px] p-6 shadow-sm">
+                        <div className="flex items-center justify-between mb-4 border-b border-[#bdcaba]/20 pb-3">
+                          <h3 className="text-[18px] font-bold text-[#141b2b] flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[#ba1a1a]">clinical_notes</span>
+                            Documented Clinical Symptoms & Medical History
+                          </h3>
+                          <span className="text-[12px] text-[#3e4a3d] font-semibold bg-[#f1f3ff] px-2.5 py-1 rounded-full border border-[#bdcaba]/30">
+                            {currentReport.abnormalValues.length} indicators
+                          </span>
+                        </div>
+
+                        <div className="space-y-3">
+                          {currentReport.abnormalValues.map((item, idx) => (
+                            <div key={idx} className="border border-[#bdcaba]/30 rounded-xl p-4 bg-[#f9fafb] space-y-2">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <h5 className="font-bold text-[#141b2b] text-[15px]">
+                                  {item.component}: <span className="text-[#006b2c] font-extrabold">{item.yourValue}</span>
+                                </h5>
+                                <span className={`px-2.5 py-0.5 rounded-md text-[11px] font-extrabold uppercase ${item.status === 'HIGH' ? 'bg-red-100 text-red-800' : item.status === 'LOW' ? 'bg-blue-100 text-blue-800' : item.status === 'BORDERLINE' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                                  {item.status}
+                                </span>
+                              </div>
+
+                              {item.normalRange && (
+                                <div className="text-[12px] text-[#3e4a3d] font-semibold bg-white p-2 rounded-lg border border-[#bdcaba]/20">
+                                  <span className="text-[#006b2c] font-bold">Expected Baseline: </span>
+                                  {item.normalRange}
+                                </div>
+                              )}
+
+                              {item.explanation && (
+                                <p className="text-[13px] text-[#141b2b] leading-relaxed pt-1">{item.explanation}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

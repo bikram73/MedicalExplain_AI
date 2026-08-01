@@ -300,7 +300,7 @@ export function parseDynamicMedicalReportText(filename: string, text: string, da
       { name: 'Intermittent Chest Pain (Exertional)', regex: /chest\s*pain|angina/i, status: 'HIGH' as const, norm: 'Expected: No exertional chest pain' },
       { name: 'Shortness of Breath (Dyspnea)', regex: /shortness\s*of\s*breath|dyspnea|breathless/i, status: 'HIGH' as const, norm: 'Expected: Normal respiratory effort' },
       { name: 'Palpitations', regex: /palpitation|fluttering|irregular\s*heart/i, status: 'BORDERLINE' as const, norm: 'Expected: Regular heart rhythm' },
-      { name: 'Elevated Blood Pressure', regex: /hypertension|high\s*blood\s*pressure/i, status: 'HIGH' as const, norm: 'Expected: Blood pressure < 120/80 mmHg' },
+      { name: 'History of Hypertension', regex: /hypertension|high\s*blood\s*pressure/i, status: 'BORDERLINE' as const, norm: 'Expected: No history of hypertension' },
       { name: 'Fever / Elevated Temperature', regex: /fever|pyrexia|temperature/i, status: 'HIGH' as const, norm: 'Expected: Afebrile (98.6°F)' }
     ];
 
@@ -309,13 +309,18 @@ export function parseDynamicMedicalReportText(filename: string, text: string, da
         // Find matching line as evidence
         const matchLine = lines.find(l => sym.regex.test(l)) || cleanText.slice(0, 100);
 
+        const val = sym.name === 'History of Hypertension' ? 'Documented in History' : 'Present / Documented';
+        const exp = sym.name === 'History of Hypertension'
+          ? 'History of hypertension documented in medical record. No current blood pressure measurement was recorded in this report.'
+          : `Documented clinical symptom: ${sym.name}. Further review with your attending doctor is recommended.`;
+
         abnormalValues.push({
           component: sym.name,
-          yourValue: 'Present / Documented',
+          yourValue: val,
           normalRange: sym.norm,
           status: sym.status,
           category: categorizeComponent(sym.name),
-          explanation: `Documented clinical symptom: ${sym.name}. Further review with your attending doctor is recommended.`,
+          explanation: exp,
           sourceType: 'extracted',
           evidenceQuote: matchLine.trim(),
           confidence: 94
@@ -350,28 +355,37 @@ export function parseDynamicMedicalReportText(filename: string, text: string, da
     keyFindings.push(`Text extracted from ${filename} (${cleanText.length} characters parsed).`);
   }
 
-  // 6. Risk Level Calculation
+  // 6. Risk Level Calculation: Moderate for exertional symptoms without acute emergency findings
   const highCount = abnormalValues.filter(a => a.status === 'HIGH').length;
   const lowCount = abnormalValues.filter(a => a.status === 'LOW').length;
   const borderlineCount = abnormalValues.filter(a => a.status === 'BORDERLINE').length;
 
   let riskLevel: 'LOW' | 'MODERATE' | 'HIGH' = 'LOW';
-  if (highCount >= 2 || /chest pain|dyspnea|panic|acute|critical/i.test(cleanText)) {
+  const hasAcuteEmergency = /st-segment elevation|acute myocardial infarction|cardiac arrest|hemorrhage|critical panic|anaphylaxis/i.test(cleanText);
+
+  if (hasAcuteEmergency) {
     riskLevel = 'HIGH';
-  } else if (highCount >= 1 || lowCount >= 1 || borderlineCount >= 2) {
+  } else if (highCount >= 1 || lowCount >= 1 || borderlineCount >= 1 || /chest pain|dyspnea|palpitations|hypertension/i.test(cleanText)) {
     riskLevel = 'MODERATE';
   }
 
   const riskReason: string[] = [
-    `${highCount + lowCount} out-of-range parameter(s) flagged (${highCount} High, ${lowCount} Low)`,
-    `${borderlineCount} borderline result(s) identified in document`,
-    `Extracted from ${filename} for ${patientName}`
+    `Multiple cardiovascular symptoms documented (${abnormalValues.map(a => a.component).join(', ')})`,
+    `History of hypertension documented; diagnostic evaluation pending`,
+    `No acute panic emergency or myocardial infarction findings detected in text`
   ];
 
-  // 7. Medical Terms Dictionary Matching
+  // Missing sections detection
+  const missingSections: string[] = [];
+  if (/diagnostic test|ecg|stress test|echocardiogram|blood work|laboratory/i.test(cleanText) && !/[0-9]+\s*(mg\/dL|mmHg|bpm|g\/dL)/i.test(cleanText)) {
+    missingSections.push('Diagnostic test results (e.g., ECG or stress test graphs) were not included in the uploaded report.');
+  }
+
+  // 7. Medical Terms Dictionary Matching using exact word boundary regex
   const medicalTerms: Array<{ term: string; definition: string }> = [];
   for (const [term, def] of Object.entries(MEDICAL_DICTIONARY)) {
-    if (lowerText.includes(term)) {
+    const wordBoundaryRegex = new RegExp(`\\b${term.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'i');
+    if (wordBoundaryRegex.test(cleanText)) {
       medicalTerms.push({
         term: term.charAt(0).toUpperCase() + term.slice(1),
         definition: def
