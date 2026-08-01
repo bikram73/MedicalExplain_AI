@@ -72,17 +72,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="flex-grow"></div>
               <div className="h-2 w-32 bg-[#bdcaba]/30 rounded-full"></div>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="h-4 w-3/4 bg-[#bdcaba]/20 rounded-full"></div>
-              <div className="h-4 w-1/2 bg-[#bdcaba]/20 rounded-full"></div>
-              <div className="grid grid-cols-2 gap-4 pt-4">
-                <div className="h-24 rounded-xl bg-[#006b2c]/5 border border-[#006b2c]/10 p-3 flex flex-col justify-between">
-                  <div className="h-3 w-16 bg-[#006b2c]/20 rounded"></div>
-                  <div className="h-6 w-24 bg-[#006b2c]/30 rounded"></div>
+            <div className="p-6 space-y-4 relative overflow-hidden h-[300px]">
+              {/* Background Image Layer */}
+              <img
+                src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1000&q=80"
+                alt="Medical Analysis Background"
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none mix-blend-multiply"
+              />
+              <div className="relative z-10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="h-4 w-3/4 bg-[#006b2c]/20 rounded-full"></div>
+                  <span className="text-[11px] font-bold text-[#006b2c] bg-[#6bff8f]/30 px-2 py-0.5 rounded-full">Active Scan</span>
                 </div>
-                <div className="h-24 rounded-xl bg-[#bdcac1]/10 border border-[#bdcaba]/10 p-3 flex flex-col justify-between">
-                  <div className="h-3 w-16 bg-[#bdcaba]/30 rounded"></div>
-                  <div className="h-6 w-20 bg-[#bdcaba]/40 rounded"></div>
+                <div className="h-3 w-1/2 bg-[#bdcaba]/30 rounded-full"></div>
+                
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="h-24 rounded-xl bg-white/80 backdrop-blur-sm border border-[#006b2c]/20 p-3 flex flex-col justify-between shadow-sm">
+                    <div className="flex items-center gap-1.5 text-[#006b2c] text-xs font-bold">
+                      <span className="material-symbols-outlined text-[16px]">monitor_heart</span>
+                      <span>Heart Metrics</span>
+                    </div>
+                    <div className="text-lg font-bold text-[#141b2b]">72 BPM <span className="text-xs text-[#006b2c] font-normal">(Normal)</span></div>
+                  </div>
+                  <div className="h-24 rounded-xl bg-white/80 backdrop-blur-sm border border-[#bdcaba]/30 p-3 flex flex-col justify-between shadow-sm">
+                    <div className="flex items-center gap-1.5 text-[#3e4a3d] text-xs font-bold">
+                      <span className="material-symbols-outlined text-[16px]">bloodtype</span>
+                      <span>Blood Panel</span>
+                    </div>
+                    <div className="text-lg font-bold text-[#141b2b]">CBC <span className="text-xs text-[#006b2c] font-normal">Analyzed</span></div>
+                  </div>
                 </div>
               </div>
             </div>
