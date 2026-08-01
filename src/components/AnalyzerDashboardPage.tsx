@@ -134,6 +134,7 @@ Copyright @ SampleTemplates.com`,
       const newReport: RecentReport = {
         id: `report-${Date.now()}`,
         filename: file.name,
+        provider: analyzedData.provider || 'Gemini',
         date: analyzedData.date || 'Just now',
         analysisTimestamp: analyzedData.analysisTimestamp || new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
         type: isPdfFile ? 'PDF Clinical Document' : isImgFile ? 'Medical Image Scan' : 'Clinical Report',
@@ -806,7 +807,7 @@ Copyright @ SampleTemplates.com`,
 
           {/* AI Summary / Simplified Summary Card */}
           <div className="bg-white border border-[#006b2c]/30 rounded-[18px] overflow-hidden shadow-sm card-glow">
-            <div className="bg-[#006b2c] px-6 py-3.5 flex items-center justify-between">
+            <div className="bg-[#006b2c] px-6 py-3.5 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[#7ffc97] text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                   auto_awesome
@@ -815,10 +816,16 @@ Copyright @ SampleTemplates.com`,
                   AI Clinical Analysis
                 </h3>
               </div>
-              <span className="bg-[#7ffc97] text-[#005221] text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
-                <span className="material-symbols-outlined text-xs">verified</span>
-                {currentReport.overallConfidence ? `${currentReport.overallConfidence}% Confidence` : '94% Confidence'}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="bg-white/15 text-white border border-white/30 text-[11px] font-semibold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm backdrop-blur-sm">
+                  <span className="material-symbols-outlined text-xs text-[#7ffc97]">bolt</span>
+                  Powered by {currentReport.provider || 'Gemini'}
+                </span>
+                <span className="bg-[#7ffc97] text-[#005221] text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+                  <span className="material-symbols-outlined text-xs">verified</span>
+                  {currentReport.overallConfidence ? `${currentReport.overallConfidence}% Confidence` : '94% Confidence'}
+                </span>
+              </div>
             </div>
 
             <div className="p-6 space-y-5">
@@ -868,8 +875,10 @@ Copyright @ SampleTemplates.com`,
                 <div className="pt-2 border-t border-[#bdcaba]/20 text-[13px] text-[#3e4a3d] space-y-1">
                   <p className="font-bold text-[#141b2b]">Risk Assessment Rationale:</p>
                   <ul className="space-y-1 pl-1">
-                    {(currentReport.riskReason && currentReport.riskReason.length > 0
+                    {(Array.isArray(currentReport.riskReason) && currentReport.riskReason.length > 0
                       ? currentReport.riskReason
+                      : typeof currentReport.riskReason === 'string' && currentReport.riskReason.trim()
+                      ? [currentReport.riskReason]
                       : [
                           'Exertional symptoms (chest pain, shortness of breath) during routine exercise requiring cardiology review',
                           'Documented history of hypertension and family history of CAD',
@@ -888,7 +897,12 @@ Copyright @ SampleTemplates.com`,
           </div>
 
           {/* MISSING SOURCE INFORMATION NOTICE CARD */}
-          {(currentReport.missingSections && currentReport.missingSections.length > 0) && (
+          {(Array.isArray(currentReport.missingSections)
+            ? currentReport.missingSections
+            : typeof currentReport.missingSections === 'string' && (currentReport.missingSections as string).trim()
+            ? [currentReport.missingSections as string]
+            : []
+          ).length > 0 && (
             <div className="bg-amber-50 border border-amber-300 rounded-[18px] p-5 shadow-sm space-y-2">
               <div className="flex items-center gap-2 text-amber-900 font-bold text-[15px]">
                 <span className="material-symbols-outlined text-amber-700 text-[22px]">
@@ -896,7 +910,12 @@ Copyright @ SampleTemplates.com`,
                 </span>
                 Missing Source Diagnostic Data Notice
               </div>
-              {currentReport.missingSections.map((notice, idx) => (
+              {(Array.isArray(currentReport.missingSections)
+                ? currentReport.missingSections
+                : typeof currentReport.missingSections === 'string' && (currentReport.missingSections as string).trim()
+                ? [currentReport.missingSections as string]
+                : []
+              ).map((notice, idx) => (
                 <p key={idx} className="text-[13px] text-amber-800 leading-relaxed pl-7">
                   {notice}
                 </p>

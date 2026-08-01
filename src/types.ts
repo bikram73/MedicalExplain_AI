@@ -47,6 +47,7 @@ export interface MedicalTermItem {
 export interface RecentReport {
   id: string;
   filename: string;
+  provider?: string; // AI Provider badge (e.g. Gemini, Claude 3.5 (OpenRouter), Groq Llama 3.3)
   date: string; // Report date extracted from document
   analysisTimestamp?: string; // AI processing timestamp
   type: string;
@@ -66,4 +67,5 @@ export interface RecentReport {
   medicalTerms?: MedicalTermItem[];
   suggestedFollowUp?: string[];
 }
+
 

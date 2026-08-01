@@ -234,6 +234,7 @@ export const UploadReportPage: React.FC<UploadReportPageProps> = ({
       const newReport: RecentReport = {
         id: `report-${Date.now()}`,
         filename: file.name,
+        provider: analyzedData.provider || 'Gemini',
         date: analyzedData.date || 'Just now',
         analysisTimestamp: analyzedData.analysisTimestamp || new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
         type: isPdf ? 'PDF Clinical Document' : isImage ? 'Medical Image Scan' : 'Clinical Report',

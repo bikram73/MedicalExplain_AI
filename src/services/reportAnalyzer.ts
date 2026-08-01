@@ -2,6 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import { RecentReport } from '../types';
 
 export interface AnalysisResult {
+  provider?: string;
   date?: string;
   analysisTimestamp?: string;
   extractedText?: string;
