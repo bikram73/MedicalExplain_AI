@@ -2,6 +2,10 @@
 
 # 🩺 MedExplain AI — Intelligent Medical Document OCR & Report Analyzer
 
+Many patients receive medical reports such as CBC reports, MRI scans, CT scans, prescriptions, discharge summaries, and consultation notes. These reports are often difficult for non-medical people to understand because they contain technical terminology.
+
+The goal of MedExplain AI is to automatically analyze uploaded medical reports, extract clinically relevant information, classify the report type, and generate an easy-to-understand summary along with risk indicators and follow-up recommendations.
+
 **A clinical-grade, patient-centric Medical Document OCR and Clinical Analysis Platform powered by a Multi-Provider AI Failover Pipeline (Gemini 3.6 Flash, Claude 3.5 Sonnet, Groq Llama 3.3 70B).**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
