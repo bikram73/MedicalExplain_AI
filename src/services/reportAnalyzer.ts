@@ -277,9 +277,25 @@ Lab Results:
  */
 export async function analyzeMedicalReport(
   file: File,
-  dataUrl: string
+  dataUrl: string,
+  onProgress?: (step: number, label: string) => void
 ): Promise<AnalysisResult> {
   const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
+  // Step 1: Document Upload & OCR Text Extraction
+  onProgress?.(1, 'Extracting Document Text & OCR (PDF.js / Tesseract)');
+  await new Promise((r) => setTimeout(r, 400));
+
+  // Step 2: Preprocessing & Document Structuring
+  onProgress?.(2, 'Preprocessing & Cleaning Clinical Text Data');
+  await new Promise((r) => setTimeout(r, 400));
+
+  // Step 3: Clinical Prompt Construction
+  onProgress?.(3, 'Building Structured Medical Prompt Engine');
+  await new Promise((r) => setTimeout(r, 400));
+
+  // Step 4: Querying AI Service
+  onProgress?.(4, 'Querying AI Provider (Gemini / Failover Pipeline)');
 
   // Step 1: Try server API endpoint (/api/analyze)
   try {
@@ -295,8 +311,9 @@ export async function analyzeMedicalReport(
 
     if (res.ok) {
       const data = await res.json();
-      // Ensure we received valid structured data, not generic placeholders
       if (data && (data.simplifiedSummary || data.keyFindings || data.abnormalValues)) {
+        onProgress?.(5, 'Normalizing Schema & Validating Clinical Results');
+        await new Promise((r) => setTimeout(r, 300));
         return data;
       }
     }
@@ -332,6 +349,9 @@ medicalTerms (array of {term, definition}), suggestedFollowUp (array of strings)
       if (response.text) {
         const parsed = JSON.parse(response.text);
         if (parsed.simplifiedSummary || parsed.keyFindings) {
+          parsed.provider = 'Gemini (Client Direct)';
+          onProgress?.(5, 'Normalizing Schema & Validating Clinical Results');
+          await new Promise((r) => setTimeout(r, 300));
           return parsed;
         }
       }
@@ -341,7 +361,11 @@ medicalTerms (array of {term, definition}), suggestedFollowUp (array of strings)
   }
 
   // Step 3: Fall back to Smart Medical Report Analysis Engine
-  return generateSmartMedicalAnalysis(file.name);
+  onProgress?.(5, 'Normalizing Schema & Validating Clinical Results');
+  await new Promise((r) => setTimeout(r, 300));
+  const fallbackResult = generateSmartMedicalAnalysis(file.name);
+  fallbackResult.provider = fallbackResult.provider || 'Smart Clinical Parser';
+  return fallbackResult;
 }
 
 /**

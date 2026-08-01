@@ -21,6 +21,8 @@ export const AnalyzerDashboardPage: React.FC<AnalyzerDashboardPageProps> = ({
   const [fullscreenModal, setFullscreenModal] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStep, setUploadStep] = useState(1);
+  const [uploadStepLabel, setUploadStepLabel] = useState('Extracting Document Text & OCR');
   const [copiedText, setCopiedText] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [showEvidenceMap, setShowEvidenceMap] = useState<Record<string, boolean>>({});
@@ -122,6 +124,8 @@ Copyright @ SampleTemplates.com`,
 
   const handleFileUpload = (file: File) => {
     setIsUploading(true);
+    setUploadStep(1);
+    setUploadStepLabel('Extracting Document Text & OCR (PDF.js / Tesseract)');
     const reader = new FileReader();
 
     reader.onload = async () => {
@@ -129,7 +133,10 @@ Copyright @ SampleTemplates.com`,
       const isPdfFile = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
       const isImgFile = file.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(file.name);
 
-      const analyzedData = await analyzeMedicalReport(file, dataUrl);
+      const analyzedData = await analyzeMedicalReport(file, dataUrl, (step, label) => {
+        setUploadStep(step);
+        setUploadStepLabel(label);
+      });
 
       const newReport: RecentReport = {
         id: `report-${Date.now()}`,
@@ -661,6 +668,37 @@ Copyright @ SampleTemplates.com`,
         </div>
       </div>
 
+      {/* Active Document & Model Info Banner */}
+      <div className="mb-6 bg-gradient-to-r from-white via-[#f0fdf4] to-white border border-[#006b2c]/20 rounded-2xl p-4 shadow-sm flex flex-wrap items-center justify-between gap-4 print:hidden">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-[#006b2c]/10 text-[#006b2c] flex items-center justify-center font-bold">
+            <span className="material-symbols-outlined text-[24px]">description</span>
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-[16px] font-bold text-[#141b2b]">{currentReport.filename}</h2>
+              <span className="text-[11px] font-bold bg-[#f1f3ff] text-[#3e4a3d] border border-[#bdcaba]/40 px-2.5 py-0.5 rounded-md">
+                {currentReport.type || 'Clinical Report'}
+              </span>
+            </div>
+            <p className="text-[12px] text-[#3e4a3d] mt-0.5">
+              Report Date: <span className="font-semibold text-[#141b2b]">{currentReport.date || 'Extracted'}</span> • Analyzed: <span className="font-semibold text-[#141b2b]">{currentReport.analysisTimestamp || 'Just now'}</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 bg-white border border-[#006b2c]/30 px-3.5 py-1.5 rounded-xl shadow-xs">
+            <span className="material-symbols-outlined text-[#006b2c] text-[18px]">psychology</span>
+            <span className="text-[12px] font-medium text-[#3e4a3d]">AI Model / Engine:</span>
+            <span className="text-[12px] font-extrabold text-[#005221] bg-[#7ffc97] px-2.5 py-0.5 rounded-md border border-[#006b2c]/20 flex items-center gap-1">
+              <span className="material-symbols-outlined text-xs text-[#005221]">bolt</span>
+              {currentReport.provider || 'Gemini'}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Top Quick Drag & Drop Banner */}
       <section className="mb-8 print:hidden" id="upload-section">
         <label
@@ -684,9 +722,56 @@ Copyright @ SampleTemplates.com`,
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           />
           {isUploading ? (
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-10 h-10 border-4 border-[#006b2c] border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-[#006b2c] font-bold text-[15px]">Analyzing uploaded report with Gemini Vision OCR...</p>
+            <div className="w-full p-3 space-y-3 text-left">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 bg-[#006b2c] text-white rounded-lg flex items-center justify-center font-bold">
+                    <span className="material-symbols-outlined animate-spin text-[18px]">sync</span>
+                  </div>
+                  <div>
+                    <h3 className="text-[14px] font-bold text-[#141b2b]">Analyzing Document with AI Pipeline</h3>
+                    <p className="text-[12px] text-[#006b2c] font-bold">{uploadStepLabel}</p>
+                  </div>
+                </div>
+                <span className="bg-[#006b2c] text-white text-[11px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+                  Stage {uploadStep}/5 ({uploadStep * 20}%)
+                </span>
+              </div>
+
+              <div className="w-full h-2 bg-[#f1f3ff] rounded-full overflow-hidden border border-[#bdcaba]/30">
+                <div 
+                  className="h-full bg-gradient-to-r from-[#006b2c] to-[#7ffc97] transition-all duration-300 rounded-full"
+                  style={{ width: `${uploadStep * 20}%` }}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 pt-1">
+                {[
+                  { num: 1, label: 'OCR & Text' },
+                  { num: 2, label: 'Cleaning' },
+                  { num: 3, label: 'Prompt Engine' },
+                  { num: 4, label: 'AI Inference' },
+                  { num: 5, label: 'Schema Check' },
+                ].map((s) => {
+                  const isDone = uploadStep > s.num;
+                  const isCurrent = uploadStep === s.num;
+                  return (
+                    <div 
+                      key={s.num}
+                      className={`text-center py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1 ${
+                        isDone 
+                          ? 'bg-[#f0fdf4] text-[#006b2c] border border-[#006b2c]/30' 
+                          : isCurrent 
+                          ? 'bg-[#006b2c] text-white shadow-xs animate-pulse' 
+                          : 'bg-gray-50 text-gray-400 border border-gray-200'
+                      }`}
+                    >
+                      <span>{isDone ? '✓' : `${s.num}.`}</span>
+                      <span className="truncate">{s.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ) : (
             <div className="flex flex-col md:flex-row items-center gap-4 text-center md:text-left">

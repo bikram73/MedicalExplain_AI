@@ -219,9 +219,21 @@ export const UploadReportPage: React.FC<UploadReportPageProps> = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadStep, setUploadStep] = useState(1);
+  const [uploadStepLabel, setUploadStepLabel] = useState('Extracting Document Text & OCR');
+  const [uploadFileName, setUploadFileName] = useState('');
+  const [uploadFileSize, setUploadFileSize] = useState('');
 
   const handleFileUpload = (file: File) => {
     setUploading(true);
+    setUploadStep(1);
+    setUploadStepLabel('Extracting Document Text & OCR (PDF.js / Tesseract)');
+    setUploadFileName(file.name);
+    const formattedSize = file.size > 1024 * 1024 
+      ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` 
+      : `${(file.size / 1024).toFixed(0)} KB`;
+    setUploadFileSize(formattedSize);
+
     const reader = new FileReader();
 
     reader.onload = async () => {
@@ -229,7 +241,10 @@ export const UploadReportPage: React.FC<UploadReportPageProps> = ({
       const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
       const isImage = file.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(file.name);
 
-      const analyzedData = await analyzeMedicalReport(file, dataUrl);
+      const analyzedData = await analyzeMedicalReport(file, dataUrl, (step, label) => {
+        setUploadStep(step);
+        setUploadStepLabel(label);
+      });
 
       const newReport: RecentReport = {
         id: `report-${Date.now()}`,
@@ -238,9 +253,7 @@ export const UploadReportPage: React.FC<UploadReportPageProps> = ({
         date: analyzedData.date || 'Just now',
         analysisTimestamp: analyzedData.analysisTimestamp || new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
         type: isPdf ? 'PDF Clinical Document' : isImage ? 'Medical Image Scan' : 'Clinical Report',
-        fileSize: file.size > 1024 * 1024 
-          ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` 
-          : `${(file.size / 1024).toFixed(0)} KB`,
+        fileSize: formattedSize,
         riskLevel: analyzedData.riskLevel || 'MODERATE',
         riskReason: analyzedData.riskReason,
         missingSections: analyzedData.missingSections,
@@ -323,19 +336,97 @@ export const UploadReportPage: React.FC<UploadReportPageProps> = ({
           className="relative group cursor-pointer"
         >
           <div
-            className={`upload-dashed-border bg-white p-12 flex flex-col items-center justify-center transition-all duration-300 h-[380px] shadow-sm ${
+            className={`upload-dashed-border bg-white p-6 md:p-12 flex flex-col items-center justify-center transition-all duration-300 min-h-[380px] shadow-sm ${
               isDragging ? 'bg-[#006b2c]/10 scale-[0.99]' : 'hover:bg-[#006b2c]/5'
             }`}
           >
             {uploading ? (
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-16 h-16 border-4 border-[#006b2c] border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-[#006b2c] font-bold text-[18px]">
-                  Analyzing medical document...
-                </p>
-                <p className="text-[#3e4a3d] text-[14px]">
-                  Extracting lab values, prescriptions, and key markers with Gemini AI
-                </p>
+              <div className="w-full max-w-xl mx-auto p-6 text-left space-y-5">
+                <div className="flex items-center justify-between pb-3 border-b border-[#006b2c]/15">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-[#006b2c]/10 text-[#006b2c] rounded-xl flex items-center justify-center font-bold">
+                      <span className="material-symbols-outlined animate-spin text-[22px]">sync</span>
+                    </div>
+                    <div>
+                      <h3 className="text-[17px] font-bold text-[#141b2b]">AI Document Pipeline Processing</h3>
+                      <p className="text-[12px] text-[#3e4a3d] font-medium truncate max-w-[280px]">
+                        {uploadFileName || 'Medical Report'} {uploadFileSize ? `(${uploadFileSize})` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="bg-[#7ffc97] text-[#005221] text-[11px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+                    Stage {uploadStep}/5
+                  </span>
+                </div>
+
+                {/* Progress Bar */}
+                <div>
+                  <div className="flex justify-between text-[12px] font-bold text-[#141b2b] mb-1.5">
+                    <span className="text-[#006b2c] font-bold">{uploadStepLabel}</span>
+                    <span className="text-[#006b2c] font-black">{uploadStep * 20}%</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-[#f1f3ff] rounded-full overflow-hidden border border-[#bdcaba]/30">
+                    <div 
+                      className="h-full bg-gradient-to-r from-[#006b2c] to-[#7ffc97] transition-all duration-500 rounded-full"
+                      style={{ width: `${uploadStep * 20}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Pipeline Steps List */}
+                <div className="space-y-2">
+                  {[
+                    { step: 1, title: 'Extracting Document Text & OCR', detail: 'Parsing PDF structures and running OCR layout analysis' },
+                    { step: 2, title: 'Preprocessing Clinical Text', detail: 'Cleaning medical shorthand, dates, and laboratory values' },
+                    { step: 3, title: 'Building Structured Prompt Engine', detail: 'Injecting diagnostic rules, risk thresholds, and evidence schema' },
+                    { step: 4, title: 'Querying AI Engine (Gemini / Failover)', detail: 'Generating verified clinical interpretation and risk level' },
+                    { step: 5, title: 'Validating Clinical Schema', detail: 'Checking confidence score, abnormal flags, and medical terms' },
+                  ].map((s) => {
+                    const isDone = uploadStep > s.step;
+                    const isCurrent = uploadStep === s.step;
+                    return (
+                      <div 
+                        key={s.step} 
+                        className={`p-2.5 rounded-xl border transition-all duration-300 flex items-center gap-3 ${
+                          isDone 
+                            ? 'bg-[#f0fdf4] border-[#006b2c]/30 text-[#006b2c]' 
+                            : isCurrent 
+                            ? 'bg-white border-[#006b2c] shadow-sm ring-2 ring-[#006b2c]/20 text-[#141b2b]' 
+                            : 'bg-gray-50 border-gray-200 text-gray-400 opacity-60'
+                        }`}
+                      >
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${
+                          isDone 
+                            ? 'bg-[#006b2c] text-white' 
+                            : isCurrent 
+                            ? 'bg-[#006b2c] text-white animate-pulse' 
+                            : 'bg-gray-200 text-gray-500'
+                        }`}>
+                          {isDone ? (
+                            <span className="material-symbols-outlined text-[14px]">check</span>
+                          ) : (
+                            s.step
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p className={`text-[12px] font-bold ${isCurrent ? 'text-[#006b2c]' : ''}`}>
+                              {s.title}
+                            </p>
+                            {isCurrent && (
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-[#006b2c] bg-[#7ffc97]/30 px-2 py-0.5 rounded-md animate-pulse">
+                                Processing...
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-[#3e4a3d] truncate">
+                            {s.detail}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             ) : (
               <>
