@@ -43,35 +43,43 @@ export async function analyzeWithGemini(
     contents = `${systemPrompt}\n\n${userPrompt}`;
   }
 
-  // Timeout wrapper
-  const apiCall = ai.models.generateContent({
-    model: 'gemini-3.6-flash',
-    contents,
-    config: {
-      responseMimeType: 'application/json',
-    },
-  });
+  // Try gemini models sequentially if quota limit is reached
+  const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+  let lastError: any = null;
 
-  const timeoutPromise = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('Gemini API request timed out')), timeoutMs)
-  );
+  for (const modelName of modelsToTry) {
+    try {
+      const apiCall = ai.models.generateContent({
+        model: modelName,
+        contents,
+        config: {
+          responseMimeType: 'application/json',
+        },
+      });
 
-  const response: any = await Promise.race([apiCall, timeoutPromise]);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Gemini API request timed out (${modelName})`)), timeoutMs)
+      );
 
-  if (!response || !response.text) {
-    throw new Error('Empty response received from Gemini API');
+      const response: any = await Promise.race([apiCall, timeoutPromise]);
+
+      if (response && response.text) {
+        const rawText = response.text;
+        let parsed: any;
+        try {
+          parsed = JSON.parse(rawText);
+        } catch (err) {
+          const cleanJson = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+          parsed = JSON.parse(cleanJson);
+        }
+        parsed.provider = `Gemini (${modelName})`;
+        return parsed;
+      }
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`[Gemini] Model ${modelName} failed: ${err?.message || err}`);
+    }
   }
 
-  const rawText = response.text;
-  let parsed: any;
-  try {
-    parsed = JSON.parse(rawText);
-  } catch (err) {
-    // Attempt markdown block cleanup
-    const cleanJson = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-    parsed = JSON.parse(cleanJson);
-  }
-
-  parsed.provider = 'Gemini';
-  return parsed;
+  throw lastError || new Error('All Gemini models failed');
 }
