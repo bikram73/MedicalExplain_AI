@@ -22,8 +22,9 @@ export interface AnalysisResult {
     component: string;
     yourValue: string;
     normalRange: string;
-    status: 'HIGH' | 'BORDERLINE' | 'NORMAL';
+    status: 'HIGH' | 'LOW' | 'BORDERLINE' | 'NORMAL';
     explanation?: string;
+    category?: string;
     sourceType?: 'extracted' | 'interpreted';
     evidenceQuote?: string;
     confidence?: number;
@@ -104,12 +105,12 @@ Diagnostic Tests Conducted:
       simplifiedSummary: `Emily Johnson was evaluated for new symptoms of chest pain and shortness of breath that occur during exercise. While she has a history of high blood pressure, these new symptoms require further investigation to ensure her heart is functioning correctly during physical activity. The clinical focus is on determining the cause of her chest pain and managing her cardiac health.`,
       riskLevel: 'MODERATE',
       riskReason: [
-        'Three concerning exertional symptoms detected (chest pain, palpitations, shortness of breath)',
-        'Underlying history of hypertension and family history of CAD',
-        'No acute emergency red flags identified in the provided document'
+        '3 exertional symptoms identified (chest pain, palpitations, shortness of breath)',
+        'History of hypertension and family history of CAD',
+        'No critical panic findings reported in available text'
       ],
       missingSections: [
-        'No diagnostic test results (e.g., ECG, stress test, or lab panels) were included in the uploaded report fragment. The AI analysis is based strictly on available history and complaints.'
+        'No objective diagnostic test results (e.g., ECG or stress test graphs) were included in this text fragment. Analysis is based on documented clinical history.'
       ],
       overallConfidence: 94,
       keyFindingItems: [
@@ -150,7 +151,8 @@ Diagnostic Tests Conducted:
           yourValue: 'Present',
           normalRange: 'Expected: No chest pain during physical activity',
           status: 'HIGH',
-          explanation: 'Exertional chest pain may warrant further evaluation by a healthcare professional to determine the underlying cause.',
+          category: 'Cardiology & Clinical Symptoms',
+          explanation: 'Exertional chest pain is outside the expected normal state. Clinical evaluation depends on physical context, workload, and physician evaluation.',
           sourceType: 'extracted',
           evidenceQuote: 'presented with intermittent chest pain, primarily on exertion',
           confidence: 96
@@ -160,7 +162,8 @@ Diagnostic Tests Conducted:
           yourValue: 'Intermittent',
           normalRange: 'Expected: Regular heart rhythm without fluttering',
           status: 'BORDERLINE',
-          explanation: 'Palpitations may be associated with several conditions and should be discussed with a healthcare professional.',
+          category: 'Cardiology & Clinical Symptoms',
+          explanation: 'Intermittent cardiac fluttering is slightly outside the normal expected rhythm and warrants evaluation by your doctor.',
           sourceType: 'extracted',
           evidenceQuote: 'occasional episodes of palpitations over the last two months',
           confidence: 92
@@ -170,7 +173,8 @@ Diagnostic Tests Conducted:
           yourValue: 'On exertion',
           normalRange: 'Expected: Unimpaired breathing during routine exercise',
           status: 'HIGH',
-          explanation: 'Breathlessness during routine activities (like jogging) suggests changes in physical tolerance and warrants review by your doctor.',
+          category: 'Cardiology & Clinical Symptoms',
+          explanation: 'Breathlessness during routine activities suggests changes in physical tolerance and warrants review by your doctor.',
           sourceType: 'extracted',
           evidenceQuote: 'shortness of breath during her regular jogging sessions, which was previously well-tolerated',
           confidence: 95
@@ -183,9 +187,9 @@ Diagnostic Tests Conducted:
         { term: 'Exertion', definition: 'Physical effort or exercise.' }
       ],
       suggestedFollowUp: [
-        'Complete the diagnostic tests mentioned in the cardiology evaluation (results were not included in this text).',
-        'Discuss the need for a stress test or imaging with Dr. Alan Green.',
-        'Monitor and log the frequency and intensity of chest pain or palpitations.'
+        'Complete objective cardiac diagnostic testing (e.g., ECG, echocardiogram, or exercise stress test).',
+        'Discuss findings with Dr. Alan Green or a cardiologist.',
+        'Maintain a symptom diary tracking chest pain or palpitations.'
       ]
     };
   }
@@ -208,10 +212,11 @@ Lab Results:
     simplifiedSummary: `Your metabolic profile shows a generally stable state with good blood glucose and lipid control. Serum Uric Acid is slightly elevated, and Vitamin D levels are borderline low. Adjusting dietary purines and Vitamin D intake will support optimal long-term joint and bone health.`,
     riskLevel: 'LOW',
     riskReason: [
-      'Metabolic indicators predominantly within standard reference bounds',
-      'Mild elevation in Serum Uric Acid and mild Vitamin D insufficiency',
-      'No critical organ markers flagged'
+      '1 mild elevation detected: Serum Uric Acid (7.8 mg/dL vs ref 3.4 - 7.0 mg/dL)',
+      '1 borderline result: Vitamin D-Total (28.5 ng/mL vs ref 30.0 - 100.0 ng/mL)',
+      '4 core metabolic & kidney filtration markers strictly within normal limits'
     ],
+    missingSections: [], // Complete lab results provided - no missing section notice needed
     overallConfidence: 96,
     keyFindingItems: [
       {
@@ -244,7 +249,8 @@ Lab Results:
         yourValue: '7.8 mg/dL',
         normalRange: '3.4 - 7.0 mg/dL',
         status: 'HIGH',
-        explanation: 'Slightly elevated uric acid levels can crystallize in joints or kidneys. Moderating high-purine foods may be recommended after consulting your doctor.',
+        category: 'Metabolic & Chemistry Panel',
+        explanation: 'Slightly above the laboratory reference interval (3.4 - 7.0 mg/dL). Clinical interpretation depends on overall context, hydration, and physician review.',
         sourceType: 'extracted',
         evidenceQuote: 'Serum Uric Acid: 7.8 mg/dL (Reference: 3.4 - 7.0 mg/dL)',
         confidence: 99
@@ -253,8 +259,9 @@ Lab Results:
         component: 'Vitamin D-Total',
         yourValue: '28.5 ng/mL',
         normalRange: '30.0 - 100.0 ng/mL',
-        status: 'BORDERLINE',
-        explanation: 'Vitamin D supports bone strength and immune function. Levels between 20-30 ng/mL indicate mild insufficiency.',
+        status: 'LOW',
+        category: 'Metabolic & Chemistry Panel',
+        explanation: 'Slightly below the laboratory reference lower bound (30.0 ng/mL). Indicates mild insufficiency which can be reviewed with your primary care doctor.',
         sourceType: 'extracted',
         evidenceQuote: 'Vitamin D-Total: 28.5 ng/mL (Reference: 30.0 - 100.0 ng/mL)',
         confidence: 97
@@ -265,8 +272,8 @@ Lab Results:
       { term: 'Hemoglobin A1c', definition: 'A measure of average blood sugar levels over the past 2-3 months.' }
     ],
     suggestedFollowUp: [
-      'Schedule a routine 3-month follow-up blood check for Uric Acid.',
-      'Discuss Vitamin D3 supplementation options with your doctor.'
+      'Schedule a routine follow-up with your physician to review blood chemistry.',
+      'Discuss dietary purine adjustments and Vitamin D supplementation options with your doctor.'
     ]
   };
 }

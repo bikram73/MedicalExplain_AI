@@ -8,6 +8,7 @@ export interface StandardMedicalReport {
   provider: string; // e.g. "Gemini", "Claude 3.5 (OpenRouter)", "Groq Llama 3.3", "Smart Extractor"
   confidence: number;
   summary: string;
+  documentType?: string;
   patientInfo: {
     name?: string;
     dob?: string;
@@ -22,8 +23,9 @@ export interface StandardMedicalReport {
     component: string;
     yourValue: string;
     normalRange: string;
-    status: 'HIGH' | 'BORDERLINE' | 'NORMAL';
+    status: 'HIGH' | 'LOW' | 'BORDERLINE' | 'NORMAL';
     explanation: string;
+    category?: string;
     sourceType?: 'extracted' | 'interpreted';
     evidenceQuote?: string;
     confidence?: number;
@@ -58,6 +60,49 @@ export interface StandardMedicalReport {
   missingSections?: string[];
   overallConfidence?: number;
   abnormalValues?: any[];
+}
+
+export function categorizeComponent(componentName: string): string {
+  const name = (componentName || '').toLowerCase();
+  if (/wbc|white blood|neutrophil|lymphocyte|monocyte|eosinophil|basophil/i.test(name)) {
+    return 'White Blood Cells & Differential';
+  }
+  if (/rbc|red blood|hemoglobin|hgb|hematocrit|hct|mcv|mch|mchc|rdw/i.test(name)) {
+    return 'Red Blood Cells & Indices';
+  }
+  if (/platelet|plt|mpv/i.test(name)) {
+    return 'Platelets';
+  }
+  if (/uric|glucose|hba1c|a1c|creatinine|bun|sodium|potassium|calcium|cholesterol|triglyceride|hdl|ldl|vitamin|ast|alt|bilirubin|alkaline|protein|albumin/i.test(name)) {
+    return 'Metabolic & Chemistry Panel';
+  }
+  if (/chest pain|palpitations|shortness of breath|dyspnea|blood pressure|hypertension|ecg|heart rate|cardio/i.test(name)) {
+    return 'Cardiology & Clinical Symptoms';
+  }
+  return 'General Clinical Indicators';
+}
+
+export function detectDocumentType(filename?: string, text?: string): string {
+  const str = `${filename || ''} ${text || ''}`.toLowerCase();
+  if (/cbc|hematology|complete blood count|hemoglobin|platelet|white blood cell|red blood cell/i.test(str)) {
+    return 'CBC / Hematology Panel';
+  }
+  if (/cardiology|cardio|ecg|electrocardiogram|exertion|chest pain|hypertension|palpitations/i.test(str)) {
+    return 'Cardiology Evaluation Report';
+  }
+  if (/uric acid|lipid|cholesterol|metabolic|glucose|chemistry|kidney|liver|creatinine|blood panel/i.test(str)) {
+    return 'Blood Chemistry & Metabolic Panel';
+  }
+  if (/x-ray|xray|radiology|mri|ct scan|ultrasound/i.test(str)) {
+    return 'Radiology & Imaging Report';
+  }
+  if (/prescription|medication|pharmacy|dosage/i.test(str)) {
+    return 'Prescription & Medication';
+  }
+  if (/discharge|clinical note|hospital summary/i.test(str)) {
+    return 'Discharge Summary';
+  }
+  return 'General Clinical Report';
 }
 
 /**
@@ -95,21 +140,27 @@ export function validateAndNormalizeReport(
     : [];
 
   const abnormalResults = rawAbnormal.map((item: any) => {
-    let status: 'HIGH' | 'BORDERLINE' | 'NORMAL' = 'NORMAL';
+    let status: 'HIGH' | 'LOW' | 'BORDERLINE' | 'NORMAL' = 'NORMAL';
     const s = String(item.status || '').toUpperCase();
-    if (s.includes('HIGH') || s.includes('ABNORMAL') || s.includes('ELEVATED')) {
+    if (s.includes('HIGH') || s.includes('ELEVATED') || s.includes('ABOVE')) {
       status = 'HIGH';
+    } else if (s.includes('LOW') || s.includes('BELOW') || s.includes('DECREASED') || s.includes('DEFICIENT')) {
+      status = 'LOW';
     } else if (s.includes('BORDERLINE') || s.includes('MILD') || s.includes('MODERATE')) {
       status = 'BORDERLINE';
     } else {
       status = 'NORMAL';
     }
 
+    const component = String(item.component || item.test || 'Clinical Indicator');
+    const category = item.category || categorizeComponent(component);
+
     return {
-      component: String(item.component || item.test || 'Clinical Indicator'),
+      component,
       yourValue: String(item.yourValue || item.value || 'Present'),
       normalRange: String(item.normalRange || item.reference || 'Standard Normal'),
       status,
+      category,
       explanation: String(
         item.explanation || item.notes || 'Parameter reviewed by clinical analysis engine.'
       ),
@@ -191,10 +242,13 @@ export function validateAndNormalizeReport(
     minute: '2-digit',
   });
 
+  const docType = raw.documentType || detectDocumentType(raw.filename, rawText || summary);
+
   return {
     provider: providerName,
     confidence,
     summary,
+    documentType: docType,
     patientInfo,
     conditions,
     medicines: uniqueMeds,

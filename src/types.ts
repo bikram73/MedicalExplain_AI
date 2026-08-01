@@ -4,8 +4,9 @@ export interface MedicalFinding {
   component: string;
   normalRange: string;
   yourValue: string;
-  status: 'HIGH' | 'BORDERLINE' | 'NORMAL';
+  status: 'HIGH' | 'LOW' | 'BORDERLINE' | 'NORMAL';
   explanation?: string;
+  category?: string;
 }
 
 export interface Medication {
@@ -26,17 +27,19 @@ export interface KeyFindingItem {
   sourceType?: 'extracted' | 'interpreted';
   evidenceQuote?: string;
   confidence?: number;
+  category?: string;
 }
 
 export interface AbnormalValueItem {
   component: string;
   yourValue: string;
   normalRange: string;
-  status: 'HIGH' | 'BORDERLINE' | 'NORMAL';
+  status: 'HIGH' | 'LOW' | 'BORDERLINE' | 'NORMAL';
   explanation?: string;
   sourceType?: 'extracted' | 'interpreted';
   evidenceQuote?: string;
   confidence?: number;
+  category?: string;
 }
 
 export interface MedicalTermItem {
@@ -51,6 +54,7 @@ export interface RecentReport {
   date: string; // Report date extracted from document
   analysisTimestamp?: string; // AI processing timestamp
   type: string;
+  documentType?: string; // Detected type e.g. "CBC / Hematology Panel", "Cardiology Evaluation", etc.
   fileSize: string;
   imageSrc?: string;
   fileType?: 'image' | 'pdf' | 'document';
