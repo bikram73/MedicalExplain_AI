@@ -299,9 +299,7 @@ export async function processMedicalReportPipeline(
   if (!extractedText && imageBase64) {
     console.log('[OCR] Running Tesseract.js text extraction on uploaded document...');
     try {
-      const cleanBase64 = imageBase64.replace(/^data:[^;]+;base64,/, '');
-      const imageBuffer = Buffer.from(cleanBase64, 'base64');
-      const { data } = await Tesseract.recognize(imageBuffer, 'eng');
+      const { data } = await Tesseract.recognize(imageBase64, 'eng');
       extractedText = data.text || '';
       console.log(`[OCR] Extracted ${extractedText.length} characters of text.`);
     } catch (ocrErr) {
