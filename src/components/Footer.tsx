@@ -108,7 +108,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab }) => {
       </div>
 
       <div className="mt-12 pt-8 border-t border-[#bdcaba]/10 text-center text-[12px] text-[#3e4a3d]">
-        © 2024 MedExplain AI. Professional Assisted Intelligence.
+        © 2026 MedExplain AI. Professional Assisted Intelligence.
       </div>
     </footer>
   );

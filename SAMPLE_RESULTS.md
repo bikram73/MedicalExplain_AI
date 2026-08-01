@@ -24,7 +24,7 @@ PATIENT DEMOGRAPHICS:
 Name: Emily Johnson
 DOB: 01/15/1989 (Age 35)
 Patient ID: 987654321
-Date of Visit: 03/10/2024
+Date of Visit: 03/10/2026
 Referring Physician: Dr. Alan Green, MD
 
 CHIEF COMPLAINT & HISTORY:
@@ -53,7 +53,7 @@ IMPRESSION & PLAN:
     "name": "Emily Johnson",
     "dob": "01/15/1989",
     "patientId": "987654321",
-    "dateOfReport": "03/10/2024",
+    "dateOfReport": "03/10/2026",
     "referringPhysician": "Dr. Alan Green, MD",
     "specialty": "Cardiology"
   },
@@ -129,7 +129,7 @@ IMPRESSION & PLAN:
 METROPOLITAN LAB SERVICES
 Fast Blood Panel & Lipid Profile
 
-Patient: John Doe | Age: 48 | Sex: M | Date: 02/18/2024
+Patient: John Doe | Age: 48 | Sex: M | Date: 02/18/2026
 Physician: Dr. Sarah Jenkins, Internal Medicine
 
 LAB RESULTS:
@@ -153,7 +153,7 @@ LAB RESULTS:
     "name": "John Doe",
     "dob": "N/A",
     "patientId": "N/A",
-    "dateOfReport": "02/18/2024",
+    "dateOfReport": "02/18/2026",
     "referringPhysician": "Dr. Sarah Jenkins",
     "specialty": "Internal Medicine"
   },
@@ -225,7 +225,7 @@ LAB RESULTS:
 ```
 VALLEY IMAGING RADIOLOGY REPORT
 Procedure: Chest X-Ray 2 Views (PA & Lateral)
-Date: 01/22/2024
+Date: 01/22/2026
 Patient: Sarah Miller (DOB: 05/12/1975)
 Radiologist: Dr. Robert Vance, MD
 
@@ -246,7 +246,7 @@ No acute cardiopulmonary process identified.
     "name": "Sarah Miller",
     "dob": "05/12/1975",
     "patientId": "N/A",
-    "dateOfReport": "01/22/2024",
+    "dateOfReport": "01/22/2026",
     "referringPhysician": "N/A",
     "specialty": "Radiology"
   },

@@ -44,7 +44,7 @@ export const AnalyzerDashboardPage: React.FC<AnalyzerDashboardPageProps> = ({
   const currentReport = report || {
     id: 'report-default',
     filename: 'Cardiology_Medical_Report_EmilyJohnson.pdf',
-    date: '03/10/2024',
+    date: '03/10/2026',
     type: 'Cardiology Evaluation Report',
     fileSize: '1.2 MB',
     riskLevel: 'HIGH',
@@ -56,13 +56,13 @@ Patient Information:
 Name: Emily Johnson
 Date of Birth: 01/15/1989
 Patient ID: 987654321
-Date of Report: 03/10/2024
+Date of Report: 03/10/2026
 Referring Physician: Dr. Alan Green, MD
 Specialty: Cardiology
 Contact Information: [Physician's Contact Information]
 
 Introduction:
-This medical report is prepared for Emily Johnson, following her consultation and comprehensive evaluation in our cardiology department on 03/08/2024. The purpose of this report is to document Ms. Johnson's current cardiac health status and outline the management plan recommended based on our findings.
+This medical report is prepared for Emily Johnson, following her consultation and comprehensive evaluation in our cardiology department on 03/08/2026. The purpose of this report is to document Ms. Johnson's current cardiac health status and outline the management plan recommended based on our findings.
 
 Medical History:
 Ms. Johnson has a history of hypertension, diagnosed three years ago, which she has been managing with medication. She has no known drug allergies. Family history reveals her father had coronary artery disease. She is a non-smoker and maintains a generally active lifestyle.

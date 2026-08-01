@@ -315,7 +315,7 @@ Below is an example of the structured output returned by the `/api/analyze` endp
     "name": "Emily Johnson",
     "dob": "01/15/1989",
     "patientId": "987654321",
-    "dateOfReport": "03/10/2024",
+    "dateOfReport": "03/10/2026",
     "referringPhysician": "Dr. Alan Green, MD",
     "specialty": "Cardiology"
   },

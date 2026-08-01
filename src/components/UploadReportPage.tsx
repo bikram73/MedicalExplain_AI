@@ -11,7 +11,7 @@ export const DEFAULT_REPORTS: RecentReport[] = [
   {
     id: 'report-emily-cardiology',
     filename: 'Cardiology_Medical_Report_EmilyJohnson.pdf',
-    date: '03/10/2024',
+    date: '03/10/2026',
     analysisTimestamp: '31 Jul 2026, 10:42 AM',
     type: 'Cardiology Evaluation Report',
     fileSize: '1.2 MB',
@@ -33,13 +33,13 @@ Patient Information:
 Name: Emily Johnson
 Date of Birth: 01/15/1989
 Patient ID: 987654321
-Date of Report: 03/10/2024
+Date of Report: 03/10/2026
 Referring Physician: Dr. Alan Green, MD
 Specialty: Cardiology
 Contact Information: [Physician's Contact Information]
 
 Introduction:
-This medical report is prepared for Emily Johnson, following her consultation and comprehensive evaluation in our cardiology department on 03/08/2024. The purpose of this report is to document Ms. Johnson's current cardiac health status and outline the management plan recommended based on our findings.
+This medical report is prepared for Emily Johnson, following her consultation and comprehensive evaluation in our cardiology department on 03/08/2026. The purpose of this report is to document Ms. Johnson's current cardiac health status and outline the management plan recommended based on our findings.
 
 Medical History:
 Ms. Johnson has a history of hypertension, diagnosed three years ago, which she has been managing with medication. She has no known drug allergies. Family history reveals her father had coronary artery disease. She is a non-smoker and maintains a generally active lifestyle.
@@ -128,8 +128,8 @@ Diagnostic Tests Conducted:
   },
   {
     id: 'report-1',
-    filename: 'Blood_Test_Report_Oct23.pdf',
-    date: '10/24/2024',
+    filename: 'Blood_Test_Report_Oct26.pdf',
+    date: '10/24/2026',
     analysisTimestamp: '31 Jul 2026, 09:15 AM',
     type: 'Blood Test (CBC & Lipid Panel)',
     fileSize: '2.4 MB',
@@ -145,7 +145,7 @@ Diagnostic Tests Conducted:
     imageSrc: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC6v3T6RgUYWyItJSLWedT9tY1PHPviPSZ_Wr3Bpu1q9nNQjWeYQGFo_PGr5IotOlfuWssamIaZRUNqYUkpod54xZQNcSxEKSMyUyIGdVxjVSIpMPjHa9XD_Z53L6r0Oaw3cpothUWyZLgJ-hvvtF5aOIeGnm81qzcqFWttndabR86KTHaTxMuIIA-Qzi1DrbHyJqqH3sGthqTznW_rElx2l8gXeDl28YAx2wRUUHbQK5l2WgMHqyUIjr4YNpGLIBy-MY-GuvsG5jQ',
     extractedText: `Comprehensive Blood Panel Report
 Patient: Robert Davis
-Date: Oct 24, 2024
+Date: Oct 24, 2026
 
 Lab Results:
 - Serum Uric Acid: 7.8 mg/dL (Reference: 3.4 - 7.0 mg/dL) [HIGH]
