@@ -2,10 +2,6 @@
 
 # 🩺 MedExplain AI — Intelligent Medical Document OCR & Report Analyzer
 
-Many patients receive medical reports such as CBC reports, MRI scans, CT scans, prescriptions, discharge summaries, and consultation notes. These reports are often difficult for non-medical people to understand because they contain technical terminology.
-
-The goal of MedExplain AI is to automatically analyze uploaded medical reports, extract clinically relevant information, classify the report type, and generate an easy-to-understand summary along with risk indicators and follow-up recommendations.
-
 **A clinical-grade, patient-centric Medical Document OCR and Clinical Analysis Platform powered by a Multi-Provider AI Failover Pipeline (Gemini 3.6 Flash, Claude 3.5 Sonnet, Groq Llama 3.3 70B).**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
@@ -434,10 +430,28 @@ Detailed benchmarking methodology is available in [TECHNICAL_REPORT.md](./TECHNI
 <a id="license"></a>
 ## 📄 License
 
-This project is open-source under the **[MIT License](LICENSE)**.
+This project is open-source and licensed under the **[MIT License](./LICENSE)**.
+
+```text
+MIT License
+
+Copyright (c) 2026 Bikram Manna & MedExplain AI Project
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+```
 
 ---
 
 <div align="center">
+  <p>🔗 <strong>Full License Document:</strong> <a href="./LICENSE">LICENSE</a></p>
   <sub>Built with ❤️ for accessible, transparent healthcare AI.</sub>
 </div>
+
